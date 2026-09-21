@@ -13,40 +13,33 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22.16.0'
-      - name: Clone frozen product and Mosha reference
+      - name: Clone frozen product and design reference
         run: |
           mkdir -p "$RUNNER_TEMP/astra/evidence"
           cd "$RUNNER_TEMP/astra"
           git clone https://github.com/Simon66-workshop/66QuantStudio.git
           cd 66QuantStudio
-          git show 1ca8bf4f5433bcdce816103df622b3c52e935451:docs/audits/ASTRA-20260921-000.mjs > ../ui-audit.mjs
+          git show 907766faa721c9adee212bcc454ded9a851e44fa:docs/audits/ASTRA-20260921-000.mjs > ../ui-audit.mjs
           git checkout --detach ac3b8915488da0664d78a4b19afb262636735bbe
           git rev-parse HEAD > ../evidence/base-sha.txt
           cd ..
-          git clone --depth 1 https://github.com/Simon66-workshop/mosha-card-ui.git
+          git clone https://github.com/Simon66-workshop/mosha-card-ui.git
+          git -C mosha-card-ui checkout --detach 7abd3b0b811f483f8d172f15e843836496824b3f
           git -C mosha-card-ui rev-parse HEAD > evidence/mosha-sha.txt
-      - name: Independent install test build and dependency inventory
+      - name: Install test and build unmodified product
         run: |
           cd "$RUNNER_TEMP/astra/66QuantStudio"
-          set +e
           { uname -a; node --version; npm --version; date -u +%FT%TZ; } > ../evidence/environment.txt
           npm install > ../evidence/npm-install.log 2>&1
-          echo "$?" > ../evidence/npm-install.exit
           npm test > ../evidence/npm-test.log 2>&1
-          echo "$?" > ../evidence/npm-test.exit
           npm run build > ../evidence/npm-build.log 2>&1
-          echo "$?" > ../evidence/npm-build.exit
-          npm audit --json > ../evidence/npm-audit-root.json 2>&1
-          npm audit --prefix apps/web --json > ../evidence/npm-audit-web.json 2>&1
-          git status --short > ../evidence/install-working-tree.txt
-          exit 0
-      - name: Prepare independent browser and Chinese fonts
+      - name: Prepare isolated browser with Chinese fonts
         run: |
           sudo apt-get update -qq
           sudo apt-get install -y fonts-noto-cjk
           mkdir -p "$RUNNER_TEMP/astra/browser"
           npm install --prefix "$RUNNER_TEMP/astra/browser" playwright@1.55.1
-      - name: Actually click through localhost UI and cross-origin probes
+      - name: Browser follow-up and independent engine edge tests
         run: |
           cd "$RUNNER_TEMP/astra/66QuantStudio"
           mv server/runtime ../runtime-after-unit-tests
@@ -57,10 +50,9 @@ jobs:
             curl -sf http://127.0.0.1:3198/api/health > ../evidence/health.json && break
             sleep 1
           done
-          curl -sS -D ../evidence/home-headers.txt http://127.0.0.1:3198/ > ../evidence/home.html
           export ASTRA_PLAYWRIGHT="$RUNNER_TEMP/astra/browser/node_modules/playwright/index.mjs"
           export ASTRA_OUT="$RUNNER_TEMP/astra/evidence"
-          node "$RUNNER_TEMP/astra/ui-audit.mjs" > ../evidence/browser-harness.log 2>&1
+          node "$RUNNER_TEMP/astra/ui-audit.mjs" > ../evidence/followup-harness.log 2>&1
       - name: Hash evidence
         if: always()
         run: |
@@ -69,6 +61,6 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: astra-20260921-browser
+          name: astra-20260921-followup
           path: ${{ runner.temp }}/astra/evidence/
           retention-days: 30
