@@ -1,0 +1,69 @@
+name: Astra R3 isolated baseline verification
+on:
+  push:
+    branches: [audit/astra-20260921-r3]
+    paths: [.github/workflows/ASTRA-20260921-R3.yml]
+permissions:
+  contents: read
+jobs:
+  baseline:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.16.0'
+      - name: Clone frozen candidate and Mosha reference
+        run: |
+          mkdir -p "$RUNNER_TEMP/astra-r3/evidence"
+          cd "$RUNNER_TEMP/astra-r3"
+          git clone https://github.com/Simon66-workshop/66QuantStudio.git
+          cd 66QuantStudio
+          git fetch origin
+          git rev-parse origin/main > ../evidence/main-at-clone.txt
+          git checkout --detach 6ab0cf4ccddd9515f5cc93d51296ad41a1fa4f29
+          git rev-parse HEAD > ../evidence/base-sha.txt
+          git bundle create ../evidence/66QuantStudio.bundle HEAD
+          git diff --stat a0a1213bad9df74aa561ea2a8e2814b987fc2137 HEAD > ../evidence/fix-stat.txt
+          git ls-files -z | xargs -0 sha256sum > ../evidence/tracked-source.sha256
+          cd ..
+          git clone https://github.com/Simon66-workshop/mosha-card-ui.git
+          git -C mosha-card-ui checkout --detach 7abd3b0b811f483f8d172f15e843836496824b3f
+          git -C mosha-card-ui rev-parse HEAD > evidence/mosha-sha.txt
+      - name: Exact install test build and start
+        run: |
+          cd "$RUNNER_TEMP/astra-r3/66QuantStudio"
+          set +e
+          { uname -a; node --version; npm --version; date -u +%FT%TZ; } > ../evidence/environment.txt
+          npm install > ../evidence/npm-install.log 2>&1
+          echo "$?" > ../evidence/npm-install.exit
+          npm test > ../evidence/npm-test.log 2>&1
+          echo "$?" > ../evidence/npm-test.exit
+          npm run build > ../evidence/npm-build.log 2>&1
+          echo "$?" > ../evidence/npm-build.exit
+          npm audit --json > ../evidence/npm-audit-root.json 2>&1
+          npm audit --prefix apps/web --json > ../evidence/npm-audit-web.json 2>&1
+          git status --short > ../evidence/install-working-tree.txt
+          npm start > ../evidence/npm-start.log 2>&1 &
+          PID=$!
+          trap 'kill "$PID" 2>/dev/null || true' EXIT
+          for i in $(seq 1 30); do
+            curl -sf http://127.0.0.1:3198/api/health > ../evidence/health.json && break
+            sleep 1
+          done
+          curl -sS -D ../evidence/home-headers.txt http://127.0.0.1:3198/ > ../evidence/home.html
+          exit 0
+      - name: Package isolated source and installed dependencies
+        if: always()
+        run: |
+          cd "$RUNNER_TEMP/astra-r3"
+          tar --exclude='*/.git' --exclude='*/server/runtime' --exclude='*/.env' -czf audited-workspace.tar.gz 66QuantStudio mosha-card-ui
+          sha256sum audited-workspace.tar.gz > evidence/workspace.sha256
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: astra-20260921-r3-baseline
+          path: |
+            ${{ runner.temp }}/astra-r3/audited-workspace.tar.gz
+            ${{ runner.temp }}/astra-r3/evidence/
+          retention-days: 90
