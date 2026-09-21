@@ -82,6 +82,8 @@
   border-radius: 10px;
   font-size: 12px;
   font-weight: 500;
+  flex-shrink: 0;
+  white-space: nowrap;
 }
 .mosha-btn-primary {
   background: var(--color-accent);
@@ -126,23 +128,108 @@
   min-height: 100dvh;
   display: grid;
   grid-template-columns: 228px 1fr;
+  grid-template-rows: auto 1fr;
+  grid-template-areas:
+    "nav main"
+    "nav main";
   position: relative;
   isolation: isolate;
+  background: var(--mosha-bg);
 }
 .qs-shell > .mosha-ambient {
   position: fixed;
   inset: 0;
   z-index: 0;
+  pointer-events: none;
+  grid-area: nav / nav / main / main;
+}
+.qs-shell[data-animated="0"] > .mosha-ambient {
+  display: none;
 }
 .qs-shell > * {
   position: relative;
   z-index: 1;
 }
+.qs-topbar {
+  display: none;
+  grid-area: topbar;
+}
+.qs-nav {
+  grid-area: nav;
+}
+.qs-shell > main {
+  grid-area: main;
+}
+.qs-menu-btn {
+  display: none;
+}
+.qs-nav-drawer {
+  display: none;
+}
+.qs-composer {
+  display: flex;
+  gap: 8px;
+  align-items: flex-end;
+}
+.qs-composer textarea {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.qs-error {
+  margin: 8px 0;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid rgb(196 69 58 / 0.45);
+  background: rgb(196 69 58 / 0.12);
+  color: #f0c4bf;
+  font-size: 13px;
+}
 @media (max-width: 900px) {
   .qs-shell {
     grid-template-columns: 1fr;
+    grid-template-rows: auto 1fr;
+    grid-template-areas:
+      "topbar"
+      "main";
+  }
+  .qs-topbar {
+    display: flex;
+  }
+  .qs-menu-btn {
+    display: inline-flex;
   }
   .qs-nav {
+    display: none;
+  }
+  .qs-nav-drawer {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 40;
+  }
+  .qs-nav-backdrop {
+    position: absolute;
+    inset: 0;
+    border: 0;
+    background: rgb(0 0 0 / 0.48);
+  }
+  .qs-nav-panel {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    width: min(280px, 88vw);
+    padding: 20px 16px;
+    background: color-mix(in srgb, var(--mosha-bg, #08080c) 88%, transparent);
+    backdrop-filter: blur(var(--mosha-blur, 22px));
+    border-right: 1px solid var(--color-border);
+    overflow: auto;
+  }
+}
+@media (min-width: 901px) {
+  .qs-topbar,
+  .qs-menu-btn,
+  .qs-nav-drawer {
     display: none;
   }
 }

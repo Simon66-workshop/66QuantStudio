@@ -28,8 +28,9 @@ export function CompetitionsPage() {
           className="mosha-btn-ghost"
           onClick={async () => {
             await api.contest({ enabled: true, connected: true });
-            const conv = await api.startConversation({ kind: "contest", title: "期货模拟赛助手" });
-            nav(`/conversations/${conv.id}`);
+              const conv = await api.startConversation({ kind: "contest", title: "期货模拟赛助手" });
+              await refresh();
+              nav(`/conversations/${conv.id}`);
           }}
         >
           进入 AI 交易助手
@@ -90,7 +91,7 @@ export function CompetitionsPage() {
               await refresh();
             }}
           >
-            开始盯盘
+            开始盯盘（本地单次评估）
           </button>
           <button
             className="mosha-btn-ghost"
@@ -112,9 +113,9 @@ export function CompetitionsPage() {
           </button>
         </div>
         <p className="mt-3 text-sm text-muted">
-          状态 {snap?.jev.running ? "运行中" : "停止"} · 最近动作 {snap?.jev.last?.action || "—"} · {snap?.jev.last?.reason}
+          状态 {snap?.jev.running ? "已开启（不会后台自动跑）" : "停止"} · 最近动作 {snap?.jev.last?.action || "—"} · {snap?.jev.last?.reason}
           <br />
-          {snap?.jev.last?.note || "无 TypeSafe 密钥时使用本地规则评估；概率不是胜率。权益停止线只暂停，不自动平仓。"}
+          {snap?.jev.last?.note || "无 TypeSafe 密钥时使用本地规则评估；开始只做一次评估，再点采样才会刷新。相同行情不会重复堆计划。概率不是胜率。"}
         </p>
         <ol className="mt-2 max-h-40 overflow-auto text-[11px] text-dim">
           {(snap?.jev.log || []).slice(0, 12).map((l, i) => (
