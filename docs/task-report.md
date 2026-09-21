@@ -21,12 +21,11 @@
 
 ## 怎么跑
 
+克隆目的地仓库后必须构建前端（GitHub 上未入库 `apps/web/dist`，打包 JS 超过 API 写入体积）：
+
 ```sh
 git clone https://github.com/Simon66-workshop/66QuantStudio.git
 cd 66QuantStudio
-# 已提交 apps/web/dist 时，可直接：
-node server/index.mjs
-# 或完整安装后再构建：
 npm install
 npm test
 npm run build
@@ -39,7 +38,7 @@ npm start
 
 Node 需要 **22.12+**（构建用 22.22.2 验证）。
 
-云桌面若服务仍在跑：**[Try Live](bc-0b5a2cba-1eb5-5e4a-bdcb-65000d5cd229#desktop)**，打开 http://127.0.0.1:3198/。
+本云桌面已构建并在跑，可 **[Try Live](bc-0b5a2cba-1eb5-5e4a-bdcb-65000d5cd229#desktop)**，打开 http://127.0.0.1:3198/。
 
 ## SOP 实跑（本环境）
 
@@ -53,7 +52,9 @@ Node 需要 **22.12+**（构建用 22.22.2 验证）。
 
 ## 已知缺口 / 残留风险
 
-- 上游 DSH `pnpm run web` 未在本 Web 进程内拉起（需 Node 22.19+ 与 DSH Home）。工作台已捆绑 15 份 SKILL.md 与 catalog；完整 QuantStudio 树在构建机 `vendor/quantstudio/`。`cursor[bot]` 对目的地仓库 git push 为 403，GitHub 上的可运行树通过 Simon 账号 API 写入。可选：`scripts/sync-quantstudio.sh`。
+- 上游 DSH `pnpm run web` 未在本 Web 进程内拉起（需 Node 22.19+ 与 DSH Home）。工作台已捆绑 15 份 SKILL.md 与 catalog。完整 QuantStudio 树在构建机 `vendor/quantstudio/`，**未推入 GitHub**（约 65MB）；可选 `scripts/sync-quantstudio.sh`。
+- GitHub 上的 `server/data/catalog.json` 是紧凑快照（15/44/14 的 id/名称/描述）；专家 `excerpt`/`role`、专家团 `lead`/`members` 在远端可能被省略。本机完整 catalog 仍在构建目录。
+- `cursor[bot]` 对目的地仓库 `git push` 为 403；GitHub 树通过 Simon 账号 Contents API 写入 `main`。
 - 无 PandaData / 官方赛事 CLI：账户与成交为本地演示，`executed-sim` 不是柜台成交。
 - 无 TypeSafe 密钥：Jev 用本地规则，不是 jev-1.13.0 官方评估。
 - 可选模型接口 8s 超时失败则回退本地引擎。
