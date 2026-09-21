@@ -31,7 +31,16 @@ export type Conversation = {
   expertId?: string | null;
   teamId?: string | null;
   loadedSkills?: string[];
-  messages: { id: string; role: string; text: string; traces?: { step: string; detail: string }[]; artifacts?: string[]; createdAt: string }[];
+  messages: {
+    id: string;
+    role: string;
+    text: string;
+    traces?: { step: string; detail: string }[];
+    artifacts?: string[];
+    engine?: string;
+    modelGap?: string | null;
+    createdAt: string;
+  }[];
   artifacts: { id: string; title: string; html: string }[];
 };
 export type Dataset = {
@@ -45,6 +54,7 @@ export type Dataset = {
   rows?: Record<string, string>[];
 };
 export type Snapshot = {
+  csrfToken?: string;
   catalog: { counts: Record<string, number>; skills: Skill[]; experts: Expert[]; teams: Team[] };
   conversations: Omit<Conversation, "messages" | "artifacts">[];
   datasets: Dataset[];
@@ -96,11 +106,20 @@ export type Snapshot = {
   };
 };
 
+let csrfToken = "";
+
+export function setCsrfToken(token: string) {
+  csrfToken = token;
+}
+
 async function req<T>(url: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(url, {
-    ...init,
-    headers: { "content-type": "application/json", ...(init?.headers || {}) },
-  });
+  const method = (init?.method || "GET").toUpperCase();
+  const headers: Record<string, string> = {
+    "content-type": "application/json",
+    ...((init?.headers as Record<string, string>) || {}),
+  };
+  if (csrfToken && method !== "GET" && method !== "HEAD") headers["x-studio-csrf"] = csrfToken;
+  const res = await fetch(url, { ...init, headers });
   if (!res.ok) {
     const err = await res.json().catch(() => ({ error: res.statusText }));
     throw new Error(err.error || res.statusText);
@@ -117,11 +136,17 @@ export const api = {
   skillSource: (id: string) => req<{ markdown: string }>(`/api/skills/${encodeURIComponent(id)}?source=1`),
   createSkill: (body: unknown) => req("/api/skills", { method: "POST", body: JSON.stringify(body) }),
   uninstallSkill: (id: string) => req(`/api/skills/${encodeURIComponent(id)}`, { method: "DELETE" }),
+  installSkill: (id: string) =>
+    req(`/api/skills/${encodeURIComponent(id)}/install`, { method: "POST", body: "{}" }),
   conversation: (id: string) => req<Conversation>(`/api/conversations/${id}`),
   startConversation: (body: unknown) =>
     req<Conversation>("/api/conversations", { method: "POST", body: JSON.stringify(body) }),
-  send: (id: string, text: string) =>
-    req<Conversation>(`/api/conversations/${id}/messages`, { method: "POST", body: JSON.stringify({ text }) }),
+  send: (id: string, text: string, idempotencyKey?: string) =>
+    req<Conversation>(`/api/conversations/${id}/messages`, {
+      method: "POST",
+      headers: idempotencyKey ? { "idempotency-key": idempotencyKey } : undefined,
+      body: JSON.stringify({ text, idempotencyKey }),
+    }),
   loadSkill: (id: string, skillId: string) =>
     req(`/api/conversations/${id}/skills`, { method: "POST", body: JSON.stringify({ skillId }) }),
   addDataset: (name: string, csv: string) =>

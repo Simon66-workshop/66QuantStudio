@@ -1,9 +1,9 @@
+import { useEffect, useId, useRef, useState, type CSSProperties, type PointerEvent, type ReactNode } from "react";
 import { CARD_LAYER_NAMES, cardIndexVar, moshaLensMarkup, stageVars } from "../mosha/recipe";
 import { PRESETS } from "../mosha/defaults";
 import type { CardData, PresetId } from "../mosha/types";
 import { SymbolIcon } from "./SymbolIcon";
 import { cn } from "../lib/utils";
-import type { CSSProperties, ReactNode } from "react";
 
 export function MoshaLayers() {
   return (
@@ -43,19 +43,76 @@ export function MoshaHand({
   preset?: PresetId;
   onPick?: (card: CardData) => void;
 }) {
-  const params = { ...PRESETS[preset].apply(), cards: cards.slice(0, 6), fan: { ...PRESETS[preset].apply().fan, cardW: 200, cardH: 280, gap: 96 } };
+  const params = {
+    ...PRESETS[preset].apply(),
+    cards: cards.slice(0, 6),
+    fan: { ...PRESETS[preset].apply().fan, cardW: 200, cardH: 280, gap: 96 },
+  };
   const vars = stageVars(params);
   const n = cards.length;
+  const lensId = `mosha-lens-${useId().replace(/[^a-zA-Z0-9_-]/g, "")}`;
+  const root = useRef<HTMLElement>(null);
+  const [active, setActive] = useState<number | null>(null);
+  const [fit, setFit] = useState(1);
+  const selected = active;
+
+  useEffect(() => {
+    const stage = root.current;
+    if (!stage) return;
+    const resize = () => {
+      const css = getComputedStyle(stage);
+      const read = (k: string) => parseFloat(css.getPropertyValue(k)) || 0;
+      const half = (cards.length - 1) / 2;
+      const w = read("--mosha-card-w") || params.fan.cardW;
+      const h = read("--mosha-card-h") || params.fan.cardH;
+      const gap = read("--mosha-gap") || params.fan.gap;
+      const arc = read("--mosha-arc") || params.fan.arc;
+      const lift = read("--mosha-lift") || params.motion.lift;
+      const span = w + (cards.length - 1) * gap + h + 60;
+      const tall = h + half * half * arc + lift + w + 60;
+      setFit(Math.max(0.05, Math.min(1, (stage.clientWidth - 24) / span, (stage.clientHeight - 24) / tall)));
+    };
+    const observer = new ResizeObserver(resize);
+    observer.observe(stage);
+    resize();
+    return () => observer.disconnect();
+  }, [cards.length, params.fan.cardW, params.fan.cardH, params.fan.gap, params.fan.arc, params.motion.lift]);
+
+  function move(event: PointerEvent<HTMLElement>) {
+    const r = event.currentTarget.getBoundingClientRect();
+    if (r.width && r.height) {
+      event.currentTarget.style.setProperty("--mosha-lx", `${((event.clientX - r.left) / r.width) * 100}%`);
+      event.currentTarget.style.setProperty("--mosha-ly", `${((event.clientY - r.top) / r.height) * 100}%`);
+    }
+  }
+
   return (
-    <section className="mosha-stage relative h-[400px] overflow-hidden rounded-[28px]" style={vars as CSSProperties} data-layout="fan" aria-label="Quant Work Trade 入口">
-      <div dangerouslySetInnerHTML={{ __html: moshaLensMarkup(params.glass.refract) }} />
+    <section
+      ref={root}
+      className="mosha-stage relative min-h-[480px] rounded-[28px]"
+      style={{ ...vars, "--mosha-lens-filter": `url(#${lensId})`, "--mosha-fit": fit, height: 520 } as CSSProperties}
+      data-layout="fan"
+      data-refract={params.glass.refract > 0 ? 1 : 0}
+      aria-label="Quant Work Trade 入口"
+      onPointerMove={move}
+      onPointerLeave={() => {
+        if (!root.current?.contains(document.activeElement)) setActive(null);
+      }}
+      onBlur={(event) => {
+        if (!event.currentTarget.contains(event.relatedTarget as Node)) setActive(null);
+      }}
+      onKeyDown={(event) => {
+        if (event.key === "Escape") setActive(null);
+      }}
+    >
+      <div dangerouslySetInnerHTML={{ __html: moshaLensMarkup(params.glass.refract, lensId) }} />
       <div className="mosha-ambient" aria-hidden="true" />
-      <div className="mosha-hand-scale" style={{ transform: "scale(0.92)", transformOrigin: "center" }}>
-        <div className="mosha-hand" data-layout="fan" data-count={n}>
+      <div className="mosha-hand-scale">
+        <div className={selected === null ? "mosha-hand" : "mosha-hand is-isolating"} data-layout="fan" data-count={n}>
           {cards.map((card, i) => (
             <article
               key={card.id}
-              className="mosha-card"
+              className={selected === i ? "mosha-card is-active" : "mosha-card"}
               style={{ "--i": cardIndexVar(i, n), "--tint": card.tint, "--z": i + 1 } as CSSProperties}
               aria-hidden="true"
             >
@@ -82,6 +139,9 @@ export function MoshaHand({
               className="mosha-card-hit"
               style={{ "--i": cardIndexVar(i, n), "--z": i + 1 } as CSSProperties}
               aria-label={`${card.title}. ${card.description}`}
+              aria-pressed={selected === i}
+              onPointerEnter={() => setActive(i)}
+              onFocus={() => setActive(i)}
               onClick={() => onPick?.(card)}
             />
           ))}
