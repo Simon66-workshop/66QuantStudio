@@ -1,69 +1,69 @@
-name: Astra R3 isolated baseline verification
+name: Astra R3 independent browser and engine regression
 on:
   push:
     branches: [audit/astra-20260921-r3]
     paths: [.github/workflows/ASTRA-20260921-R3.yml]
 permissions:
   contents: read
+  actions: read
 jobs:
-  baseline:
+  regressions:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
       - uses: actions/setup-node@v4
         with:
           node-version: '22.16.0'
-      - name: Clone frozen candidate and Mosha reference
+      - uses: actions/download-artifact@v4
+        with:
+          name: astra-20260921-r3-baseline
+          run-id: 35621474346
+          github-token: ${{ github.token }}
+          path: ${{ runner.temp }}/r3
+      - name: Restore verified isolated baseline and audit harnesses
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
-          mkdir -p "$RUNNER_TEMP/astra-r3/evidence"
-          cd "$RUNNER_TEMP/astra-r3"
-          git clone https://github.com/Simon66-workshop/66QuantStudio.git
+          cd "$RUNNER_TEMP/r3"
+          sha256sum -c evidence/workspace.sha256
+          tar -xzf audited-workspace.tar.gz
+          mkdir -p verification
+          python - <<'PY'
+          import urllib.request,json,base64,hashlib,os,pathlib
+          root=pathlib.Path(os.environ['RUNNER_TEMP'])/'r3'/'verification'
+          for name,sha in [('browser.py','67d11c2b643fbe219dc2abde72d45b7d4bfb53f4'),('engine.mjs','6ae3ec283fbd7d05287ac4376db9cc65dee25baf')]:
+              req=urllib.request.Request('https://api.github.com/repos/Simon66-workshop/66QuantStudio/git/blobs/'+sha,headers={'Authorization':'Bearer '+os.environ['GH_TOKEN'],'Accept':'application/vnd.github+json'})
+              obj=json.load(urllib.request.urlopen(req));data=base64.b64decode(obj['content'])
+              assert hashlib.sha1(b'blob '+str(len(data)).encode()+b'\0'+data).hexdigest()==sha
+              (root/name).write_bytes(data)
+          PY
+          python -m pip install playwright==1.55.0 > verification/playwright-install.log 2>&1
+          python -m py_compile verification/browser.py
+          node --check verification/engine.mjs
+      - name: Execute independent engine and real Chrome tests
+        run: |
+          cd "$RUNNER_TEMP/r3"
+          export QS_ROOT="$PWD/66QuantStudio"
+          export OUT="$PWD/verification"
+          node verification/engine.mjs > verification/engine.log 2>&1
           cd 66QuantStudio
-          git fetch origin
-          git rev-parse origin/main > ../evidence/main-at-clone.txt
-          git checkout --detach 6ab0cf4ccddd9515f5cc93d51296ad41a1fa4f29
-          git rev-parse HEAD > ../evidence/base-sha.txt
-          git bundle create ../evidence/66QuantStudio.bundle HEAD
-          git diff --stat a0a1213bad9df74aa561ea2a8e2814b987fc2137 HEAD > ../evidence/fix-stat.txt
-          git ls-files -z | xargs -0 sha256sum > ../evidence/tracked-source.sha256
-          cd ..
-          git clone https://github.com/Simon66-workshop/mosha-card-ui.git
-          git -C mosha-card-ui checkout --detach 7abd3b0b811f483f8d172f15e843836496824b3f
-          git -C mosha-card-ui rev-parse HEAD > evidence/mosha-sha.txt
-      - name: Exact install test build and start
-        run: |
-          cd "$RUNNER_TEMP/astra-r3/66QuantStudio"
-          set +e
-          { uname -a; node --version; npm --version; date -u +%FT%TZ; } > ../evidence/environment.txt
-          npm install > ../evidence/npm-install.log 2>&1
-          echo "$?" > ../evidence/npm-install.exit
-          npm test > ../evidence/npm-test.log 2>&1
-          echo "$?" > ../evidence/npm-test.exit
-          npm run build > ../evidence/npm-build.log 2>&1
-          echo "$?" > ../evidence/npm-build.exit
-          npm audit --json > ../evidence/npm-audit-root.json 2>&1
-          npm audit --prefix apps/web --json > ../evidence/npm-audit-web.json 2>&1
-          git status --short > ../evidence/install-working-tree.txt
-          npm start > ../evidence/npm-start.log 2>&1 &
+          env -u QS_ORIGINS -u QS_ALLOW_DEV_ORIGINS HOST=127.0.0.1 PORT=3198 npm start > ../verification/npm-start.log 2>&1 &
           PID=$!
           trap 'kill "$PID" 2>/dev/null || true' EXIT
           for i in $(seq 1 30); do
-            curl -sf http://127.0.0.1:3198/api/health > ../evidence/health.json && break
+            curl -sf http://127.0.0.1:3198/api/health > ../verification/health.json && break
             sleep 1
           done
-          curl -sS -D ../evidence/home-headers.txt http://127.0.0.1:3198/ > ../evidence/home.html
-          exit 0
-      - name: Package isolated source and installed dependencies
-        if: always()
-        run: |
-          cd "$RUNNER_TEMP/astra-r3"
-          tar --exclude='*/.git' --exclude='*/server/runtime' --exclude='*/.env' -czf audited-workspace.tar.gz 66QuantStudio mosha-card-ui
-          sha256sum audited-workspace.tar.gz > evidence/workspace.sha256
+          cd ..
+          python verification/browser.py > verification/browser.log 2>&1
+          test -s verification/browser-results.json
+          test -s verification/engine-results.json
+          { node -v; npm -v; google-chrome --version; date -u +%FT%TZ; } > verification/environment.txt
+          cd verification
+          find . -type f ! -name SHA256SUMS -print0 | sort -z | xargs -0 sha256sum > SHA256SUMS
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: astra-20260921-r3-baseline
-          path: |
-            ${{ runner.temp }}/astra-r3/audited-workspace.tar.gz
-            ${{ runner.temp }}/astra-r3/evidence/
+          name: astra-20260921-r3-regressions
+          path: ${{ runner.temp }}/r3/verification/
           retention-days: 90
