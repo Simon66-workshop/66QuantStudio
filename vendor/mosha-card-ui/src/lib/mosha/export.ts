@@ -101,7 +101,7 @@ export function MoshaHand({ height = 480 }: { height?: number } = {}) {
     if(r.width&&r.height){event.currentTarget.style.setProperty("--mosha-lx",((event.clientX-r.left)/r.width*100)+"%");event.currentTarget.style.setProperty("--mosha-ly",((event.clientY-r.top)/r.height*100)+"%");}
   }
   return <section ref={root} className="mosha-stage" data-refract="${p.glass.refract>0?1:0}"
-    style={{...VARS,"--mosha-lens-filter":"url("#"+id+")","--mosha-fit":fit,height:safeHeight,minHeight:safeHeight} as CSSProperties}
+    style={{...VARS,"--mosha-lens-filter":"url(#"+id+")","--mosha-fit":fit,height:safeHeight,minHeight:safeHeight} as CSSProperties}
     onPointerMove={move} onPointerLeave={()=>{if(!root.current?.contains(document.activeElement))setActive(null);}}
     onBlur={event=>{if(!event.currentTarget.contains(event.relatedTarget))setActive(null);}}
     onKeyDown={event=>{if(event.key==="Escape"){setPinned(null);setActive(null);}}}>
