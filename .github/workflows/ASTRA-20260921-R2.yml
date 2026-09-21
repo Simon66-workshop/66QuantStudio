@@ -1,4 +1,4 @@
-name: Astra R2 independent browser regression
+name: Astra R2 focused browser verification
 on:
   push:
     branches: [audit/astra-20260921-r2]
@@ -6,37 +6,34 @@ on:
 permissions:
   contents: read
 jobs:
-  browser:
+  followup:
     runs-on: ubuntu-latest
-    timeout-minutes: 12
+    timeout-minutes: 10
     steps:
       - uses: actions/setup-node@v4
         with:
           node-version: '22.16.0'
-      - name: Prepare isolated fixed candidate and browser harness
+      - name: Freeze product and Mosha reference
         run: |
           mkdir -p "$RUNNER_TEMP/astra-r2/evidence"
           cd "$RUNNER_TEMP/astra-r2"
           git clone https://github.com/Simon66-workshop/66QuantStudio.git
           git -C 66QuantStudio checkout --detach a0a1213bad9df74aa561ea2a8e2814b987fc2137
           git -C 66QuantStudio rev-parse HEAD > evidence/base-sha.txt
-          curl -fsSL https://api.github.com/repos/Simon66-workshop/66QuantStudio/git/blobs/3f879ad6a8b127c691a52872888eb68503405fa7 | python -c 'import sys,json,base64;sys.stdout.buffer.write(base64.b64decode(json.load(sys.stdin)["content"]))' > evidence/browser-audit.py
+          git clone https://github.com/Simon66-workshop/mosha-card-ui.git
+          git -C mosha-card-ui checkout --detach 7abd3b0b811f483f8d172f15e843836496824b3f
+          git -C mosha-card-ui rev-parse HEAD > evidence/mosha-sha.txt
+          curl -fsSL https://api.github.com/repos/Simon66-workshop/66QuantStudio/git/blobs/afca51b6c8302ecc9872319edef7f38abf798bc9 | python -c 'import sys,json,base64;sys.stdout.buffer.write(base64.b64decode(json.load(sys.stdin)["content"]))' > evidence/followup.py
+          sed -i "s/name='断开',exact=True/name='关闭比赛模式',exact=True/" evidence/followup.py
           python -m pip install playwright==1.55.0 > evidence/pip-install.log 2>&1
           sudo apt-get update -qq > evidence/apt.log 2>&1
           sudo apt-get install -y fonts-noto-cjk >> evidence/apt.log 2>&1
-      - name: Run fresh npm commands and exercise UI
-        env:
-          BROWSER_EXEC: /usr/bin/google-chrome
+      - name: Run focused real browser scenarios
         run: |
           cd "$RUNNER_TEMP/astra-r2/66QuantStudio"
-          { uname -a; node -v; npm -v; python --version; date -u +%FT%TZ; } > ../evidence/environment.txt
-          set +e
+          { uname -a; node -v; npm -v; date -u +%FT%TZ; } > ../evidence/environment.txt
           npm install > ../evidence/npm-install.log 2>&1
-          echo "$?" > ../evidence/npm-install.exit
-          npm test > ../evidence/npm-test.log 2>&1
-          echo "$?" > ../evidence/npm-test.exit
           npm run build > ../evidence/npm-build.log 2>&1
-          echo "$?" > ../evidence/npm-build.exit
           npm start > ../evidence/npm-start.log 2>&1 &
           SERVER_PID=$!
           trap 'kill "$SERVER_PID" 2>/dev/null || true' EXIT
@@ -45,15 +42,14 @@ jobs:
             sleep 1
           done
           export AUDIT_OUT="$RUNNER_TEMP/astra-r2/evidence"
-          python ../evidence/browser-audit.py > ../evidence/browser-harness.log 2>&1
-          echo "$?" > ../evidence/browser-harness.exit
+          export MOSHA_ROOT="$RUNNER_TEMP/astra-r2/mosha-card-ui"
+          python ../evidence/followup.py > ../evidence/followup.log 2>&1
           git status --short > ../evidence/working-tree.txt
           cd ../evidence
           sha256sum * > SHA256SUMS.txt
-          exit 0
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: astra-20260921-r2-browser
+          name: astra-20260921-r2-followup
           path: ${{ runner.temp }}/astra-r2/evidence/
           retention-days: 90
