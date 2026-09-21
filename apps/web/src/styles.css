@@ -184,6 +184,32 @@
   color: #f0c4bf;
   font-size: 13px;
 }
+.qs-hero-stack {
+  display: grid;
+  gap: 12px;
+  min-height: 0;
+}
+.qs-hero-stack-item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  min-height: 88px;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+.qs-hero-stack-item h3 {
+  margin: 4px 0;
+  font-size: 18px;
+  line-height: 1.3;
+}
+.qs-hero-stack-item p {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.45;
+}
 @media (max-width: 900px) {
   .qs-shell {
     grid-template-columns: 1fr;

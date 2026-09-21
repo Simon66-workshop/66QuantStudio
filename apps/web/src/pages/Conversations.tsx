@@ -56,6 +56,7 @@ export function ConversationPage() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [missing, setMissing] = useState(false);
+  const [cutCount, setCutCount] = useState(0);
   const sending = useRef(false);
   useEffect(() => {
     setConv(null);
@@ -145,8 +146,18 @@ export function ConversationPage() {
             className="mosha-field min-h-[72px]"
             placeholder="描述需求。赛事写入会变成待确认计划。"
             value={text}
-            maxLength={MAX_MESSAGE}
-            onChange={(e) => setText(e.target.value)}
+            onChange={(e) => {
+              const next = e.target.value;
+              if (next.length > MAX_MESSAGE) {
+                const extra = next.length - MAX_MESSAGE;
+                setCutCount(extra);
+                setText(next.slice(0, MAX_MESSAGE));
+                setError(`粘贴超出 ${MAX_MESSAGE} 字，已截去 ${extra} 字。发送仍拒绝超过 ${MAX_MESSAGE} 字的内容。`);
+              } else {
+                setCutCount(0);
+                setText(next);
+              }
+            }}
             onKeyDown={(e) => {
               if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
                 e.preventDefault();
@@ -160,7 +171,7 @@ export function ConversationPage() {
         </div>
         <p className="mt-1 text-[11px] text-dim">
           {text.trim().length}/{MAX_MESSAGE}
-          {text.trim().length >= MAX_MESSAGE ? " · 已到上限，不会静默截断" : ""}
+          {cutCount > 0 ? ` · 刚才截去 ${cutCount} 字` : ""}
         </p>
       </div>
       <div>

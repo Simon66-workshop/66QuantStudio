@@ -54,12 +54,21 @@ export function MoshaHand({
   const root = useRef<HTMLElement>(null);
   const [active, setActive] = useState<number | null>(null);
   const [fit, setFit] = useState(1);
+  const [narrow, setNarrow] = useState(() =>
+    typeof window !== "undefined" ? window.matchMedia("(max-width: 719px)").matches : false,
+  );
   const selected = active;
 
   useEffect(() => {
     const stage = root.current;
     if (!stage) return;
     const resize = () => {
+      const isNarrow = stage.clientWidth < 720 || (typeof window !== "undefined" && window.innerWidth < 720);
+      setNarrow(isNarrow);
+      if (isNarrow) {
+        setFit(1);
+        return;
+      }
       const css = getComputedStyle(stage);
       const read = (k: string) => parseFloat(css.getPropertyValue(k)) || 0;
       const half = (cards.length - 1) / 2;
@@ -84,6 +93,22 @@ export function MoshaHand({
       event.currentTarget.style.setProperty("--mosha-lx", `${((event.clientX - r.left) / r.width) * 100}%`);
       event.currentTarget.style.setProperty("--mosha-ly", `${((event.clientY - r.top) / r.height) * 100}%`);
     }
+  }
+
+  if (narrow) {
+    return (
+      <section ref={root} className="qs-hero-stack" data-layout="stack" aria-label="Quant Work Trade 入口">
+        {cards.map((card) => (
+          <button key={card.id} type="button" className="qs-hero-stack-item" onClick={() => onPick?.(card)}>
+            <GlassPanel tint={card.tint}>
+              <p className="mosha-card-code">{card.code}</p>
+              <h3>{card.title}</h3>
+              <p>{card.description}</p>
+            </GlassPanel>
+          </button>
+        ))}
+      </section>
+    );
   }
 
   return (

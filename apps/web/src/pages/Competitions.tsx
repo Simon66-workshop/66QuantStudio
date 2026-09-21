@@ -10,6 +10,23 @@ export function CompetitionsPage() {
   const nav = useNavigate();
   const contest = snap?.contest;
   const [template, setTemplate] = useState(snap?.jev.templateId || "range");
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const online = Boolean(contest?.enabled && contest?.connected);
+
+  async function run(task: () => Promise<void>) {
+    setBusy(true);
+    setError(null);
+    try {
+      await task();
+      await refresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "contest-failed");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   return (
     <div className="space-y-5">
       <h1 className="font-display text-2xl font-bold">比赛</h1>
@@ -17,21 +34,33 @@ export function CompetitionsPage() {
         期货模拟赛只读巡检账户；开仓/平仓/撤单必须确认。官方 PandaAI CLI 未配置时使用本地演示账户，成交标记为
         executed-sim。因子大赛入口保留研究批次与因子池说明，提交同样走确认计划。
       </p>
+      {error ? <p className="qs-error">{error}</p> : null}
+      {!online ? <p className="text-sm text-muted">比赛未连接，确认执行已禁用。请先开启并连接模拟赛后再试。</p> : null}
       <div className="flex flex-wrap gap-2">
-        <button className="mosha-btn-primary" onClick={async () => { await api.contest({ enabled: true, connected: true }); await refresh(); }}>
+        <button
+          className="mosha-btn-primary"
+          disabled={busy}
+          onClick={() => void run(async () => { await api.contest({ enabled: true, connected: true }); })}
+        >
           开启并连接模拟赛
         </button>
-        <button className="mosha-btn-ghost" onClick={async () => { await api.contest({ enabled: false, connected: false }); await refresh(); }}>
+        <button
+          className="mosha-btn-ghost"
+          disabled={busy}
+          onClick={() => void run(async () => { await api.contest({ enabled: false, connected: false }); })}
+        >
           关闭比赛模式
         </button>
         <button
           className="mosha-btn-ghost"
-          onClick={async () => {
-            await api.contest({ enabled: true, connected: true });
+          disabled={busy}
+          onClick={() =>
+            void run(async () => {
+              await api.contest({ enabled: true, connected: true });
               const conv = await api.startConversation({ kind: "contest", title: "期货模拟赛助手" });
-              await refresh();
               nav(`/conversations/${conv.id}`);
-          }}
+            })
+          }
         >
           进入 AI 交易助手
         </button>
@@ -86,28 +115,22 @@ export function CompetitionsPage() {
           ))}
           <button
             className="mosha-btn-primary"
-            onClick={async () => {
-              await api.jevStart({ templateId: template, contract: "rb2610", mode: "autonomous" });
-              await refresh();
-            }}
+            disabled={busy}
+            onClick={() => void run(async () => { await api.jevStart({ templateId: template, contract: "rb2610", mode: "autonomous" }); })}
           >
             开始盯盘（本地单次评估）
           </button>
           <button
             className="mosha-btn-ghost"
-            onClick={async () => {
-              await api.jevStop();
-              await refresh();
-            }}
+            disabled={busy}
+            onClick={() => void run(async () => { await api.jevStop(); })}
           >
             停止
           </button>
           <button
             className="mosha-btn-ghost"
-            onClick={async () => {
-              await api.jevTick();
-              await refresh();
-            }}
+            disabled={busy}
+            onClick={() => void run(async () => { await api.jevTick(); })}
           >
             采样一轮
           </button>
@@ -148,10 +171,19 @@ export function CompetitionsPage() {
                 <td>
                   {p.status === "pending" ? (
                     <span className="flex gap-2">
-                      <button className="mosha-btn-primary h-8" onClick={async () => { await api.confirm(p.id); await refresh(); }}>
+                      <button
+                        className="mosha-btn-primary h-8"
+                        disabled={busy || !online}
+                        title={!online ? "比赛未连接，无法确认" : undefined}
+                        onClick={() => void run(async () => { await api.confirm(p.id); })}
+                      >
                         确认执行这笔交易
                       </button>
-                      <button className="mosha-btn-ghost h-8" onClick={async () => { await api.cancel(p.id); await refresh(); }}>
+                      <button
+                        className="mosha-btn-ghost h-8"
+                        disabled={busy}
+                        onClick={() => void run(async () => { await api.cancel(p.id); })}
+                      >
                         取消
                       </button>
                     </span>
