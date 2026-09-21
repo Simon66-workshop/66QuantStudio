@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { api, type Snapshot } from "./api";
+import { api, setCsrfToken, type Snapshot } from "./api";
 
 type DataState = {
   snapshot: Snapshot | null;
@@ -18,6 +18,7 @@ export const useStudioData = create<DataState>((set, get) => ({
     set({ loading: true, error: null });
     try {
       const snapshot = await api.bootstrap();
+      if (snapshot.csrfToken) setCsrfToken(snapshot.csrfToken);
       set({ snapshot, loading: false });
     } catch (error) {
       set({ error: error instanceof Error ? error.message : "load-failed", loading: false });
@@ -25,6 +26,7 @@ export const useStudioData = create<DataState>((set, get) => ({
   },
   refresh: async () => {
     const snapshot = await api.bootstrap();
+    if (snapshot.csrfToken) setCsrfToken(snapshot.csrfToken);
     set({ snapshot, error: null });
   },
 }));

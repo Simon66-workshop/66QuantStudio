@@ -2,15 +2,25 @@ import { useNavigate } from "react-router-dom";
 import { GlassPanel, HERO_CARDS, MoshaHand } from "../components/Glass";
 import { useStudioData } from "../lib/store";
 import { api } from "../lib/api";
+import type { PresetId } from "../mosha/types";
+import { useState } from "react";
 
 export function HomePage() {
   const snap = useStudioData((s) => s.snapshot);
+  const refresh = useStudioData((s) => s.refresh);
   const navigate = useNavigate();
+  const [error, setError] = useState<string | null>(null);
+  const preset = (snap?.settings.appearance.preset || "mist") as PresetId;
   async function start(kind: string) {
     const map: Record<string, string> = { quant: "/skills", work: "/teams", trade: "/competitions", skills: "/skills" };
     if (kind === "quant") {
-      const conv = await api.startConversation({ kind: "ordinary", title: "研究需求" });
-      navigate(`/conversations/${conv.id}`);
+      try {
+        const conv = await api.startConversation({ kind: "ordinary", title: "研究需求" });
+        await refresh();
+        navigate(`/conversations/${conv.id}`);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "start-failed");
+      }
       return;
     }
     navigate(map[kind] || "/");
@@ -25,7 +35,8 @@ export function HomePage() {
           {snap ? ` ${snap.catalog.counts.skills} 技能 / ${snap.catalog.counts.experts} 专家 / ${snap.catalog.counts.teams} 专家团。` : " 正在读取快照…"}
         </p>
       </header>
-      <MoshaHand cards={HERO_CARDS} preset="mist" onPick={(c) => void start(c.id)} />
+      {error ? <p className="qs-error">{error}</p> : null}
+      <MoshaHand cards={HERO_CARDS} preset={preset} onPick={(c) => void start(c.id)} />
       <div className="grid gap-4 md:grid-cols-3">
         {(snap?.conversations || []).slice(0, 3).map((c) => (
           <button key={c.id} className="text-left" onClick={() => navigate(`/conversations/${c.id}`)}>
