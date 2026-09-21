@@ -11,8 +11,8 @@
   "scripts": {
     "postinstall": "npm install --prefix apps/web",
     "dev:web": "npm run dev --prefix apps/web",
-    "dev:api": "node server/index.mjs",
-    "dev": "concurrently -k \"npm:dev:api\" \"npm:dev:web\"",
+    "dev:api": "QS_ALLOW_DEV_ORIGINS=1 node server/index.mjs",
+    "dev": "QS_ALLOW_DEV_ORIGINS=1 concurrently -k \"npm:dev:api\" \"npm:dev:web\"",
     "build": "npm run build --prefix apps/web",
     "start": "node server/index.mjs",
     "test": "node --test server/tests/*.test.mjs",

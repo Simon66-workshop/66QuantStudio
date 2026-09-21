@@ -27,7 +27,7 @@ npm install
 npm run dev
 ```
 
-然后打开 **http://127.0.0.1:5173/**。
+然后打开 **http://127.0.0.1:5173/**。`npm run dev` 会设置 `QS_ALLOW_DEV_ORIGINS=1`，只授权本项目 Vite 开发端口访问本地 API。普通 `npm start` 仍默认拒绝 5173/4173。
 
 健康检查：http://127.0.0.1:3198/api/health
 
