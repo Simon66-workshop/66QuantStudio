@@ -1,0 +1,660 @@
+{
+  "auditor": "astra",
+  "date": "2026-09-21",
+  "round": "R3",
+  "repo": "Simon66-workshop/66QuantStudio",
+  "baseSha": "6ab0cf4ccddd9515f5cc93d51296ad41a1fa4f29",
+  "previousBaseSha": "a0a1213bad9df74aa561ea2a8e2814b987fc2137",
+  "previousReport": "docs/audits/astra-20260921-r2.json",
+  "cursorResponse": "docs/audits/cursor-20260921-r2.md",
+  "verdict": "CHANGES_REQUIRED",
+  "counts": {
+    "claimedFixedThisRound": 8,
+    "verifiedFixedThisRound": 6,
+    "partialThisRound": 2,
+    "carriedForwardVerified": 22,
+    "cumulativeAccepted": 28,
+    "deferred": 2,
+    "new": 1,
+    "trackedTotal": 33
+  },
+  "summary": "390px 首页已改为可读的堆叠玻璃卡，标题18px、正文14px；默认来源隔离、方向账本、模型上下文、长输入和比赛错误反馈均接受本轮修复。8条关闭声明中6条复验通过，008/014仍为partial。22条仅承接R2已核实结果，不冒充本轮全部重测；028/031仍延期。另发现033：按README直接npm run dev，新建会话被forbidden-origin阻断。累计接受28条，仍有2条partial、2条deferred和1条新增；结论CHANGES_REQUIRED，不是8条全部关闭。",
+  "scope": "仅复验R2的8条残余/新发现与紧邻回归；不修改产品代码；R2已核实22项明确标carried-forward，不伪称本轮全部重测。",
+  "environment": {
+    "node": "22.16.0",
+    "npm": "10.9.2",
+    "os": "Ubuntu Linux x86_64 / GitHub Actions",
+    "browser": "152.0.7977.82",
+    "playwright": "1.55.0",
+    "viewports": [
+      {
+        "width": 390,
+        "height": 844
+      },
+      {
+        "width": 768,
+        "height": 844
+      },
+      {
+        "width": 1440,
+        "height": 1000
+      }
+    ],
+    "browserPlugin": "absent; regular Playwright",
+    "browserLocation": "GitHub Actions localhost 127.0.0.1:3198, not user desktop",
+    "localLimitations": [
+      "container GitHub DNS failure; clone performed in authorized Actions and verified bundle restored locally",
+      "local Chromium navigation blocked by ERR_BLOCKED_BY_ADMINISTRATOR; no policy bypass"
+    ],
+    "harnessCorrections": [
+      "B wait_for_function string conflicted with CSP; C uses locator expectation, no product CSP changes",
+      "B runner lacked CJK glyph fonts; C installed Noto CJK only in audit runtime and recaptured visuals"
+    ]
+  },
+  "commands": {
+    "install": "A exit 0",
+    "test": "A and local 29/29 pass, exit 0",
+    "build": "A and local exit 0",
+    "start": "A/C health ok:true and actual Chrome interaction",
+    "engine": "B 12 PASS / 4 FAIL / 1 OBSERVED: FAIL assertions prove 008 and 014 residuals",
+    "browser": "C 21 collection groups completed; observed-case PASS means evidence captured, not product acceptance"
+  },
+  "designReference": {
+    "repo": "Simon66-workshop/mosha-card-ui",
+    "sha": "7abd3b0b811f483f8d172f15e843836496824b3f",
+    "browserPage": "demo/cards.html",
+    "sourceComparison": "8 copied Mosha modules/CSS byte-identical to frozen reference; source background/font tokens retained",
+    "visualReview": [
+      "C:r3-home-390.png",
+      "C:r3-desktop-hover.png",
+      "C:r3-mosha-reference-hover.png"
+    ]
+  },
+  "gates": [
+    {
+      "gate": "product",
+      "verdict": "CHANGES_REQUIRED",
+      "note": "014仍生成错误待确认意图，033开发启动写入失败；029/032本轮通过。"
+    },
+    {
+      "gate": "design",
+      "verdict": "PASS_BOUNDED",
+      "note": "001本轮可读性/入口/hover/reduced-motion/resize通过；与冻结Mosha光学模块及demo对照，不等于iOS真机认证。"
+    },
+    {
+      "gate": "backend",
+      "verdict": "PASS_BOUNDED_WITH_DEFERRED",
+      "note": "015账本方向与021模型请求数据合同通过；29仓库测试通过；031仍延期。"
+    },
+    {
+      "gate": "security",
+      "verdict": "PASS_BOUNDED_WITH_DEFERRED",
+      "note": "005默认来源隔离通过；028仍延期，共享部署隔离声明不变；不是总体安全认证。"
+    },
+    {
+      "gate": "data",
+      "verdict": "CHANGES_REQUIRED",
+      "note": "独立seed IC/价格统计与模型envelope一致；008导入语法仍不拒绝非法尾随文本。"
+    }
+  ],
+  "regressions": [
+    {
+      "id": "ASTRA-20260921-001",
+      "gate": "design",
+      "cursorStatus": "fixed",
+      "auditStatus": "verified-fixed",
+      "observation": "390/768为stack，1440为fan；390px正文14px、标题18px，无横向溢出；四个入口实际可到达。hover独立激活，reduced-motion无旋转，实际resize通过。",
+      "evidence": "C:001-home-390/768/1440,001-mobile-links,001-hover,001-reduced-motion,001-live-resize",
+      "verificationRound": "R3"
+    },
+    {
+      "id": "ASTRA-20260921-002",
+      "gate": "product",
+      "cursorStatus": "fixed",
+      "auditStatus": "carried-forward-verified",
+      "verificationRound": "R2",
+      "verifiedAtBaseSha": "a0a1213bad9df74aa561ea2a8e2814b987fc2137",
+      "evidence": "docs/audits/astra-20260921-r2.json#ASTRA-20260921-002",
+      "observation": "保留R2已核实结论；本轮29个仓库测试及页面抽查未推翻，不宣称逐条重做全部原复现。"
+    },
+    {
+      "id": "ASTRA-20260921-003",
+      "gate": "design",
+      "cursorStatus": "fixed",
+      "auditStatus": "carried-forward-verified",
+      "verificationRound": "R2",
+      "verifiedAtBaseSha": "a0a1213bad9df74aa561ea2a8e2814b987fc2137",
+      "evidence": "docs/audits/astra-20260921-r2.json#ASTRA-20260921-003",
+      "observation": "保留R2已核实结论；本轮29个仓库测试及页面抽查未推翻，不宣称逐条重做全部原复现。"
+    },
+    {
+      "id": "ASTRA-20260921-004",
+      "gate": "design",
+      "cursorStatus": "fixed",
+      "auditStatus": "carried-forward-verified",
+      "verificationRound": "R2",
+      "verifiedAtBaseSha": "a0a1213bad9df74aa561ea2a8e2814b987fc2137",
+      "evidence": "docs/audits/astra-20260921-r2.json#ASTRA-20260921-004",
+      "observation": "保留R2已核实结论；本轮29个仓库测试及页面抽查未推翻，不宣称逐条重做全部原复现。"
+    },
+    {
+      "id": "ASTRA-20260921-005",
+      "gate": "security",
+      "cursorStatus": "fixed",
+      "auditStatus": "verified-fixed",
+      "observation": "无关5173/4173/3201网页的读取、设置和confirm被阻断，即使测试提供已知CSRF也不能写；账户/计划/名称不变。3198正常操作成功；单独显式dev opt-in读取/写入成功。033不推翻默认拒绝来源这一安全修复。",
+      "evidence": "C:005-foreign-5173/4173/3201,005-trusted,005-explicit-dev-positive",
+      "verificationRound": "R3"
+    },
+    {
+      "id": "ASTRA-20260921-006",
+      "gate": "security",
+      "cursorStatus": "fixed",
+      "auditStatus": "carried-forward-verified",
+      "verificationRound": "R2",
+      "verifiedAtBaseSha": "a0a1213bad9df74aa561ea2a8e2814b987fc2137",
+      "evidence": "docs/audits/astra-20260921-r2.json#ASTRA-20260921-006",
+      "observation": "保留R2已核实结论；本轮29个仓库测试及页面抽查未推翻，不宣称逐条重做全部原复现。"
+    },
+    {
+      "id": "ASTRA-20260921-007",
+      "gate": "backend",
+      "cursorStatus": "fixed",
+      "auditStatus": "carried-forward-verified",
+      "verificationRound": "R2",
+      "verifiedAtBaseSha": "a0a1213bad9df74aa561ea2a8e2814b987fc2137",
+      "evidence": "docs/audits/astra-20260921-r2.json#ASTRA-20260921-007",
+      "observation": "保留R2已核实结论；本轮29个仓库测试及页面抽查未推翻，不宣称逐条重做全部原复现。"
+    },
+    {
+      "id": "ASTRA-20260921-008",
+      "gate": "data",
+      "cursorStatus": "fixed",
+      "auditStatus": "partial",
+      "observation": "引号内空格、中途引号、合法标签字段和多行原反例已修；闭引号后的非法字符仍被拼进字段，实际CSV导入接受\"abc\"def并预览abcdef。",
+      "evidence": "B:008-original-residuals,008-reject-after-closing-quote; C:008-CSV-observed",
+      "verificationRound": "R3"
+    },
+    {
+      "id": "ASTRA-20260921-009",
+      "gate": "data",
+      "cursorStatus": "fixed",
+      "auditStatus": "carried-forward-verified",
+      "verificationRound": "R2",
+      "verifiedAtBaseSha": "a0a1213bad9df74aa561ea2a8e2814b987fc2137",
+      "evidence": "docs/audits/astra-20260921-r2.json#ASTRA-20260921-009",
+      "observation": "保留R2已核实结论；本轮29个仓库测试及页面抽查未推翻，不宣称逐条重做全部原复现。"
+    },
+    {
+      "id": "ASTRA-20260921-010",
+      "gate": "data",
+      "cursorStatus": "fixed",
+      "auditStatus": "carried-forward-verified",
+      "verificationRound": "R2",
+      "verifiedAtBaseSha": "a0a1213bad9df74aa561ea2a8e2814b987fc2137",
+      "evidence": "docs/audits/astra-20260921-r2.json#ASTRA-20260921-010",
+      "observation": "保留R2已核实结论；本轮29个仓库测试及页面抽查未推翻，不宣称逐条重做全部原复现。"
+    },
+    {
+      "id": "ASTRA-20260921-011",
+      "gate": "data",
+      "cursorStatus": "fixed",
+      "auditStatus": "carried-forward-verified",
+      "verificationRound": "R2",
+      "verifiedAtBaseSha": "a0a1213bad9df74aa561ea2a8e2814b987fc2137",
+      "evidence": "docs/audits/astra-20260921-r2.json#ASTRA-20260921-011",
+      "observation": "保留R2已核实结论；本轮29个仓库测试及页面抽查未推翻，不宣称逐条重做全部原复现。"
+    },
+    {
+      "id": "ASTRA-20260921-012",
+      "gate": "data",
+      "cursorStatus": "fixed",
+      "auditStatus": "carried-forward-verified",
+      "verificationRound": "R2",
+      "verifiedAtBaseSha": "a0a1213bad9df74aa561ea2a8e2814b987fc2137",
+      "evidence": "docs/audits/astra-20260921-r2.json#ASTRA-20260921-012",
+      "observation": "保留R2已核实结论；本轮29个仓库测试及页面抽查未推翻，不宣称逐条重做全部原复现。"
+    },
+    {
+      "id": "ASTRA-20260921-013",
+      "gate": "product",
+      "cursorStatus": "fixed",
+      "auditStatus": "carried-forward-verified",
+      "verificationRound": "R2",
+      "verifiedAtBaseSha": "a0a1213bad9df74aa561ea2a8e2814b987fc2137",
+      "evidence": "docs/audits/astra-20260921-r2.json#ASTRA-20260921-013",
+      "observation": "保留R2已核实结论；本轮29个仓库测试及页面抽查未推翻，不宣称逐条重做全部原复现。"
+    },
+    {
+      "id": "ASTRA-20260921-014",
+      "gate": "product",
+      "cursorStatus": "fixed",
+      "auditStatus": "partial",
+      "observation": "负数、非正整数和短否定句已拒绝；稍长询问/句后不要下单仍生成pending，多指令还把第一合约/手数与第二方向拼成错误单。实际UI与独立引擎一致；没有自动成交。",
+      "evidence": "B:014-original-negative-cases,014-observed-parser; C:014-observed-UI-intents",
+      "verificationRound": "R3"
+    },
+    {
+      "id": "ASTRA-20260921-015",
+      "gate": "backend",
+      "cursorStatus": "fixed",
+      "auditStatus": "verified-fixed",
+      "observation": "long2平空拒绝no-position且账本不变；反向开仓wrong-side、超平over-close，正向加减仓、空仓平仓、多合约与8笔成功fills重放一致。UI错误可见。",
+      "evidence": "B:015-directional-ledger-and-replay; C:015-UI-wrong-side",
+      "verificationRound": "R3"
+    },
+    {
+      "id": "ASTRA-20260921-016",
+      "gate": "backend",
+      "cursorStatus": "fixed",
+      "auditStatus": "carried-forward-verified",
+      "verificationRound": "R2",
+      "verifiedAtBaseSha": "a0a1213bad9df74aa561ea2a8e2814b987fc2137",
+      "evidence": "docs/audits/astra-20260921-r2.json#ASTRA-20260921-016",
+      "observation": "保留R2已核实结论；本轮29个仓库测试及页面抽查未推翻，不宣称逐条重做全部原复现。"
+    },
+    {
+      "id": "ASTRA-20260921-017",
+      "gate": "backend",
+      "cursorStatus": "fixed",
+      "auditStatus": "carried-forward-verified",
+      "verificationRound": "R2",
+      "verifiedAtBaseSha": "a0a1213bad9df74aa561ea2a8e2814b987fc2137",
+      "evidence": "docs/audits/astra-20260921-r2.json#ASTRA-20260921-017",
+      "observation": "保留R2已核实结论；本轮29个仓库测试及页面抽查未推翻，不宣称逐条重做全部原复现。"
+    },
+    {
+      "id": "ASTRA-20260921-018",
+      "gate": "product",
+      "cursorStatus": "fixed",
+      "auditStatus": "carried-forward-verified",
+      "verificationRound": "R2",
+      "verifiedAtBaseSha": "a0a1213bad9df74aa561ea2a8e2814b987fc2137",
+      "evidence": "docs/audits/astra-20260921-r2.json#ASTRA-20260921-018",
+      "observation": "保留R2已核实结论；本轮29个仓库测试及页面抽查未推翻，不宣称逐条重做全部原复现。"
+    },
+    {
+      "id": "ASTRA-20260921-019",
+      "gate": "product",
+      "cursorStatus": "fixed",
+      "auditStatus": "carried-forward-verified",
+      "verificationRound": "R2",
+      "verifiedAtBaseSha": "a0a1213bad9df74aa561ea2a8e2814b987fc2137",
+      "evidence": "docs/audits/astra-20260921-r2.json#ASTRA-20260921-019",
+      "observation": "保留R2已核实结论；本轮29个仓库测试及页面抽查未推翻，不宣称逐条重做全部原复现。"
+    },
+    {
+      "id": "ASTRA-20260921-020",
+      "gate": "backend",
+      "cursorStatus": "fixed",
+      "auditStatus": "carried-forward-verified",
+      "verificationRound": "R2",
+      "verifiedAtBaseSha": "a0a1213bad9df74aa561ea2a8e2814b987fc2137",
+      "evidence": "docs/audits/astra-20260921-r2.json#ASTRA-20260921-020",
+      "observation": "保留R2已核实结论；本轮29个仓库测试及页面抽查未推翻，不宣称逐条重做全部原复现。"
+    },
+    {
+      "id": "ASTRA-20260921-021",
+      "gate": "backend",
+      "cursorStatus": "fixed",
+      "auditStatus": "verified-fixed",
+      "observation": "本地mock第二包含ALPHA历史、技能约束、factor-momentum绑定/640行/80截面统计/gaps及artifact；指定价格表切换正确。独立Python IC均值/样本标准差与envelope一致。未把真实模型输出质量当作已测。",
+      "evidence": "B:021-envelope-and-history,021-explicit-dataset,model-captures.json; independent-numerics.json",
+      "verificationRound": "R3"
+    },
+    {
+      "id": "ASTRA-20260921-022",
+      "gate": "product",
+      "cursorStatus": "fixed",
+      "auditStatus": "carried-forward-verified",
+      "verificationRound": "R2",
+      "verifiedAtBaseSha": "a0a1213bad9df74aa561ea2a8e2814b987fc2137",
+      "evidence": "docs/audits/astra-20260921-r2.json#ASTRA-20260921-022",
+      "observation": "保留R2已核实结论；本轮29个仓库测试及页面抽查未推翻，不宣称逐条重做全部原复现。"
+    },
+    {
+      "id": "ASTRA-20260921-023",
+      "gate": "product",
+      "cursorStatus": "fixed",
+      "auditStatus": "carried-forward-verified",
+      "verificationRound": "R2",
+      "verifiedAtBaseSha": "a0a1213bad9df74aa561ea2a8e2814b987fc2137",
+      "evidence": "docs/audits/astra-20260921-r2.json#ASTRA-20260921-023",
+      "observation": "保留R2已核实结论；本轮29个仓库测试及页面抽查未推翻，不宣称逐条重做全部原复现。"
+    },
+    {
+      "id": "ASTRA-20260921-024",
+      "gate": "product",
+      "cursorStatus": "fixed",
+      "auditStatus": "carried-forward-verified",
+      "verificationRound": "R2",
+      "verifiedAtBaseSha": "a0a1213bad9df74aa561ea2a8e2814b987fc2137",
+      "evidence": "docs/audits/astra-20260921-r2.json#ASTRA-20260921-024",
+      "observation": "保留R2已核实结论；本轮29个仓库测试及页面抽查未推翻，不宣称逐条重做全部原复现。"
+    },
+    {
+      "id": "ASTRA-20260921-025",
+      "gate": "product",
+      "cursorStatus": "fixed",
+      "auditStatus": "carried-forward-verified",
+      "verificationRound": "R2",
+      "verifiedAtBaseSha": "a0a1213bad9df74aa561ea2a8e2814b987fc2137",
+      "evidence": "docs/audits/astra-20260921-r2.json#ASTRA-20260921-025",
+      "observation": "保留R2已核实结论；本轮29个仓库测试及页面抽查未推翻，不宣称逐条重做全部原复现。"
+    },
+    {
+      "id": "ASTRA-20260921-026",
+      "gate": "product",
+      "cursorStatus": "fixed",
+      "auditStatus": "carried-forward-verified",
+      "verificationRound": "R2",
+      "verifiedAtBaseSha": "a0a1213bad9df74aa561ea2a8e2814b987fc2137",
+      "evidence": "docs/audits/astra-20260921-r2.json#ASTRA-20260921-026",
+      "observation": "保留R2已核实结论；本轮29个仓库测试及页面抽查未推翻，不宣称逐条重做全部原复现。"
+    },
+    {
+      "id": "ASTRA-20260921-027",
+      "gate": "product",
+      "cursorStatus": "fixed",
+      "auditStatus": "carried-forward-verified",
+      "verificationRound": "R2",
+      "verifiedAtBaseSha": "a0a1213bad9df74aa561ea2a8e2814b987fc2137",
+      "evidence": "docs/audits/astra-20260921-r2.json#ASTRA-20260921-027",
+      "observation": "保留R2已核实结论；本轮29个仓库测试及页面抽查未推翻，不宣称逐条重做全部原复现。"
+    },
+    {
+      "id": "ASTRA-20260921-028",
+      "gate": "security",
+      "cursorStatus": "deferred",
+      "auditStatus": "deferred",
+      "verificationRound": "R3",
+      "observation": "未升级依赖。",
+      "evidence": "A:npm-audit-*.json"
+    },
+    {
+      "id": "ASTRA-20260921-029",
+      "gate": "product",
+      "cursorStatus": "fixed",
+      "auditStatus": "verified-fixed",
+      "observation": "3999/4000/4001/7999/8000字符的存储与模型当前user完全一致且尾标在；8001在调用模型前拒绝；emoji保留。实际粘贴8109留下8000并明确提示已截去109字。",
+      "evidence": "B:029-length-*,029-reject-8001,029-emoji; C:029-clipboard",
+      "verificationRound": "R3"
+    },
+    {
+      "id": "ASTRA-20260921-030",
+      "gate": "backend",
+      "cursorStatus": "fixed",
+      "auditStatus": "carried-forward-verified",
+      "verificationRound": "R2",
+      "verifiedAtBaseSha": "a0a1213bad9df74aa561ea2a8e2814b987fc2137",
+      "evidence": "docs/audits/astra-20260921-r2.json#ASTRA-20260921-030",
+      "observation": "保留R2已核实结论；本轮29个仓库测试及页面抽查未推翻，不宣称逐条重做全部原复现。"
+    },
+    {
+      "id": "ASTRA-20260921-031",
+      "gate": "backend",
+      "cursorStatus": "deferred",
+      "auditStatus": "deferred",
+      "verificationRound": "R3",
+      "observation": "完整web锁文件/dist忽略未补；端口友好提示保留已修。",
+      "evidence": "A:install-working-tree.txt; source lockfile/.gitignore"
+    },
+    {
+      "id": "ASTRA-20260921-032",
+      "gate": "product",
+      "cursorStatus": "fixed",
+      "auditStatus": "verified-fixed",
+      "observation": "offline确认按钮disabled并有说明；测试注入503后显示错误、按钮恢复且账本不变。032原吞错关闭；注入503不是服务真实故障。",
+      "evidence": "C:032-offline,032-503",
+      "verificationRound": "R3"
+    }
+  ],
+  "findings": [
+    {
+      "id": "ASTRA-20260921-014",
+      "severity": "P1",
+      "gate": "product",
+      "status": "partial",
+      "title": "询问/句后否定仍产生计划，多指令合约与方向交叉拼接",
+      "path": "server/lib/studio.mjs:380-407 parseTradeIntent",
+      "repro": [
+        "隔离npm start，启用本地模拟赛，新建比赛会话；记录pending和fills，不确认以下输入。",
+        "分别发送：开多 rb2610 100手可以吗？；开多 rb2610 3手的风险是什么？不要下单。",
+        "再发送：开多 rb2610 1手，开空 cu2701 2手。",
+        "检查新增计划contract/side/lots/reason及fills；同时用parseTradeIntent独立复现。"
+      ],
+      "expected": "询问、明确不要下单或多意图不能被自动当成一条肯定命令；不支持多指令时拒绝或澄清，contract/side/lots必须来自同一确定意图。",
+      "actual": "前两句分别产生open-long rb2610 100手和3手pending；第三句产生open-short rb2610 1手，既不是第一条开多rb2610也不是第二条开空cu2701。真实UI每个反例各新增1条计划，fills始终1（来自此前正向确认控制），未自动增加。-3手和短不要开多已拒绝，承认这一子项修复。",
+      "cause": "否定/问句只查动作前后12字符；合约和手数取首次匹配，方向在全句按平空/平多/开空/开多优先级搜索，失去同一意图的绑定。",
+      "fix": "优先限定单条、明确肯定的命令语法或结构化表单；将动作、合约、手数作为一个解析结果原子校验，含询问/否定/多动作的自然语言直接澄清。不要只继续追加少量否定词或扩大12字符窗口。保留确认门。",
+      "regression": "本报告三句反例与当前已通过的正整数/负数/0/小数/短否定对照；添加不同句长、否定在句后、多合约双动作。拒绝时pending/fills均不变。",
+      "evidence": [
+        "B:engine-results.json / 014-observed-parser",
+        "C:browser-results.json / 014-observed-UI-intents",
+        "C:r3-trade-intents.png"
+      ],
+      "originalSeverity": "P1"
+    },
+    {
+      "id": "ASTRA-20260921-008",
+      "severity": "P2",
+      "gate": "data",
+      "status": "partial",
+      "title": "CSV闭引号后的非法字符仍被静默拼接",
+      "path": "server/lib/studio.mjs:88-126 parseCsv",
+      "repro": [
+        "建立文件astra-r3-invalid.csv，内容两行：a,b 然后 \"abc\"def,1。",
+        "数据库页面真实上传该文件，检查导入错误、数据集数量和预览。",
+        "独立执行parseCsv('a,b\\n\"abc\"def,1')。"
+      ],
+      "expected": "闭合quoted字段后仅接受分隔符、换行、EOF或明确约定的空白策略；非法相邻文本必须报错且不新增数据集。",
+      "actual": "引擎输出a=abcdef,b=1；UI新增1个数据集并预览abcdef，没有错误提示。此前quoted空格、多行、中途引号和合法<b>字段反例已修；保留008原ID和R2降级后的P2，不重新声称原P0错行未修。",
+      "cause": "quoted变为false后直接回到普通字符拼接，没有after-quoted状态。",
+      "fix": "补完整CSV字段状态转换，区分unquoted/quoted/after-quoted；在after-quoted遇非法字符返回400，并保证失败导入不落库。",
+      "regression": "拒绝\"abc\"def；保持\"  padded  \"、双引号转义、字段内逗号/换行、合法标签文本正常；HTML伪装/重复列/未闭合/中途引号仍拒绝。",
+      "evidence": [
+        "B:engine-results.json / 008-reject-after-closing-quote",
+        "C:browser-results.json / 008-CSV-observed",
+        "C:astra-r3-invalid.csv.png"
+      ],
+      "originalSeverity": "P0",
+      "residualSeveritySince": "R2"
+    },
+    {
+      "id": "ASTRA-20260921-033",
+      "severity": "P2",
+      "gate": "product",
+      "status": "open",
+      "title": "README的默认开发启动命令不能新建会话",
+      "path": "package.json:13-15; README.md:27-34; apps/web/vite.config.ts server.proxy; server/lib/http-guard.mjs:18-23",
+      "repro": [
+        "隔离目录安装依赖，结束此前占用3198/5173的审计进程；不设置QS_ORIGINS或QS_ALLOW_DEV_ORIGINS。",
+        "按README直接运行npm run dev，实际看到API3198和Vite5173均启动。",
+        "打开http://127.0.0.1:5173/conversations，点击新建普通会话。"
+      ],
+      "expected": "文档给出的开发启动流程可以完成主要写操作；仅开发启动时显式授权本项目所需来源，普通npm start仍默认拒绝开发端口。",
+      "actual": "真实Chrome界面加载但新建会话显示forbidden-origin；会话数量不变。C:dev-exact.json记录命令为npm run dev；B/C的dev:web同API对照也一致。正常3198与显式opt-in控制通过。",
+      "cause": "005安全修复将5173/4173改为显式opt-in，但dev脚本没有启用该模式，README仍只给裸npm run dev。",
+      "fix": "将精确开发来源授权接到开发launcher/脚本，或将README及启动提示改成可执行的显式opt-in流程，并补端到端写入测试。禁止恢复普通启动对5173/4173的无条件信任。",
+      "regression": "干凁环境裸命令或更新后的文档命令实际新建/发送/保存设置成功；独立普通npm start仍阻断5173/4173的读取、写入和confirm。",
+      "evidence": [
+        "C:dev-exact.json",
+        "C:r3-dev-exact.png",
+        "C:npm-dev-exact.log",
+        "C:browser-results.json / 005-dev-launcher-observed"
+      ],
+      "relatedFinding": "ASTRA-20260921-005"
+    },
+    {
+      "id": "ASTRA-20260921-028",
+      "severity": "P2",
+      "gate": "security",
+      "status": "deferred",
+      "title": "依赖告警未消除，延期不等于安全豁免",
+      "path": "package.json; apps/web/package.json; npm audit",
+      "repro": [
+        "冻结版本干凁npm install。",
+        "npm audit --json；npm audit --prefix apps/web --json。"
+      ],
+      "expected": "明确未修风险与实际可达性；升级与回归另有责任人、退出条件。",
+      "actual": "本轮扫描root仍有2个critical依赖条目，web仍有2个high依赖条目。不是4个独立漏洞；本轮未证明实际RCE，也没有证明全部公告不可达。",
+      "fix": "保持deferred，Simon Wu/产品与Cursor Quant/实现责责；单独升级相关依赖，核对公告可达性并回归dev/路由/构建，不以未证明RCE作永久豁免。",
+      "regression": "升级后npm audit、npm run dev、build、路由前进后退/刷新。",
+      "evidence": [
+        "A:evidence/npm-audit-root.json",
+        "A:evidence/npm-audit-web.json"
+      ]
+    },
+    {
+      "id": "ASTRA-20260921-031",
+      "severity": "P3",
+      "gate": "backend",
+      "status": "deferred",
+      "title": "完整前端锁文件与构建目录忽略仍延期",
+      "path": "apps/web/package-lock.json; .gitignore",
+      "repro": [
+        "干凁npm install && npm run build。",
+        "检查git status --short与前端锁文件条目。"
+      ],
+      "expected": "可重复安装，构建目录不会误提交；已修好的端口提示不重复列为未修。",
+      "actual": "安装仍修改apps/web/package-lock.json，构建产生未忽略的apps/web/dist/。端口提示承接R2已修。本地额外npm ci --offline因ENOTCACHED中断，不能当作锁文件错误的独立证明。",
+      "fix": "保持deferred，Simon Wu/产品与Cursor Quant/实现责责；提交完整web锁文件、补dist忽略，在联网干凁目录npm ci复验；保留已修端口提示。",
+      "regression": "干凁npm ci、build、git状态；无bundle与端口占用提示保持。",
+      "evidence": [
+        "A:evidence/install-working-tree.txt",
+        "frozen source lockfile/.gitignore"
+      ]
+    }
+  ],
+  "evidence": {
+    "runs": [
+      {
+        "key": "A",
+        "runId": 35621474346,
+        "artifactId": 10649906288,
+        "name": "astra-20260921-r3-baseline",
+        "zipSha256": "966716d8c91c7062b695d4224ad56705b76c935eacdbde467d8a32e6f568431e",
+        "purpose": "真实clone/install/test/build/start、源码bundle、npm audit",
+        "url": "https://github.com/Simon66-workshop/66QuantStudio/actions/runs/35621474346",
+        "retentionDays": 90,
+        "expiresDate": "2026-12-20"
+      },
+      {
+        "key": "B",
+        "runId": 35622977284,
+        "artifactId": 10649139580,
+        "name": "astra-20260921-r3-regressions",
+        "zipSha256": "d982fdc06468a9ee74ffdc3ad50e18461f9d8ec1b421502cc7149037804c6b6a",
+        "purpose": "独立engine、mock请求抓包、首轮浏览器原始证据",
+        "url": "https://github.com/Simon66-workshop/66QuantStudio/actions/runs/35622977284",
+        "retentionDays": 90,
+        "expiresDate": "2026-12-20"
+      },
+      {
+        "key": "C",
+        "runId": 35623565108,
+        "artifactId": 10650304505,
+        "name": "astra-20260921-r3-focused",
+        "zipSha256": "c574c3ef338cff3de5b268e69920d100b173a9060b4820506e050e094e678426",
+        "purpose": "修正审计等待方式与CJK运行环境后的真实浏览器、Mosha对照、裸npm run dev",
+        "url": "https://github.com/Simon66-workshop/66QuantStudio/actions/runs/35623565108",
+        "retentionDays": 90,
+        "expiresDate": "2026-12-20"
+      }
+    ],
+    "fileSha256": {
+      "A:npm-install.log": "6611c8ae9b92480ca6bb50e55c1a4e45838babb1895bdb1cd221eafb54d9e032",
+      "A:npm-test.log": "a53fde1a8af52a2a5515504aacdf634f2c3c599e36161c92ddc180d6e6ec5016",
+      "A:npm-build.log": "90c8b2dd2dd294a9a6a43d6e5c76584dded488048e7305c32b732d897aa47ff6",
+      "A:health.json": "8e97074b8b7a783092bbe8e5fe7e4ac5d71f3e4f54caf4ca302b31ef83c4a85b",
+      "A:install-working-tree.txt": "fe0e01b3ef6c48d96de6bdc0d6b9dc2224b6da2685cbcff6338bd1d8627b39f6",
+      "A:npm-audit-root.json": "b5554c6f8c28d947ca9f1f30505d4efcad8ef5dd9aac7d80381ab719b14e517e",
+      "A:npm-audit-web.json": "8080b60090401ac7edb26006ad7966bb9a9021bad3ee4a361e9b7ac95225fc0e",
+      "B:engine-results.json": "1bf18025626116dc3bd09bacc73dc08807c17462f485977bb3744f704788ae99",
+      "B:engine.mjs": "7e31b6aec909b01344331ec2e2406f44a2aad9be02b66a78f26974f566f8c6f8",
+      "B:model-captures.json": "9edea463bc00430fb33c248f867b1962fbf769ad7e5790b57b21ec49640bc855",
+      "C:browser-results.json": "a0a500e95874a38f579bc055b373003bdd25ecc7e99679f5b290fa9a7596b3a1",
+      "C:browser.py": "88c5c27edf800eaca9880224ae4f16c8bbdaeb9ea9cb7c60a4a2f32c7e626535",
+      "C:dev-exact.json": "eda4dbc7acfbcb6f46885cd1ed87bcb926d000e77067de04929edba7e13898a2",
+      "C:r3-home-390.png": "89ffe85b3bb112a5ad0aeddf09b56391b89e29beb0ce20fca861dc18632e1dd7",
+      "C:r3-desktop-hover.png": "30801cab9452bc58378936e2b76e531df0fbb8d32fe6c8c0025a213fb8d3bb47",
+      "C:r3-mosha-reference-hover.png": "ca5e26280888f8d982226dc5f1b6486b520cedad3fdad62f9ea5e89f6f91b9a4",
+      "C:r3-trade-intents.png": "c954a6dbb93f84f4d71ba010acaff908e0f6aebf7e8464b6ec83237feecc912b",
+      "C:astra-r3-invalid.csv.png": "df95128741c2f94ae7c250a51b6095b3a56e3f5a9505ec1748e4a803c367362d",
+      "C:r3-dev-exact.png": "6cdff710ebfb2999db5c8693240bdfd623b929b4843c9bc5cd3f2ec70199ceeb",
+      "C:r3-offline-disabled.png": "1acb928becdc039a4d4943c5953efe6fe953fa60ddf4a983b6430ab850427463",
+      "C:r3-confirm-503.png": "a33e523c99f7e55874823571b51ee58f42cf910ceadf2a0ce9f2d2cd0f1d21a1",
+      "C:r3-overlimit-paste.png": "1a82a3d35b24e781c3c1bfef7197c24a9eb755204630945da2515ba24e1b2d60"
+    },
+    "manifestException": [
+      {
+        "file": "./npm-dev-exact.log",
+        "manifestHash": "fc622bc4182e5f0cb70c515e69320c5baf14b25e11e73f40e43ecd337b7c11e7",
+        "finalHash": "1f44dbf724e3c673c012ad9451e04db5bdb5e067cf31a33f05d9ea731d40c497",
+        "matchedPrefixBytes": 802,
+        "finalBytes": 971,
+        "explanation": "Only subprocess cleanup lines were appended after manifest creation."
+      }
+    ],
+    "consoleInterpretation": "C pageErrors=[]; 400 no-position is expected rejection, 503 is deliberate response injection, 403 demonstrates033, 404 belongs to reference demo favicon, not production UI failure."
+  },
+  "seedOracle": {
+    "method": "Python csv + statistics.correlation/mean/stdev, independent of studio.mjs",
+    "csi300": {
+      "rows": 420,
+      "lastDate": "2025-08-11",
+      "lastClose": 4226.65,
+      "maxDrawdown": -0.04595874922021215
+    },
+    "factor": {
+      "rows": 640,
+      "crossSections": 80,
+      "icMean": 0.935314813971839,
+      "icSampleStd": 0.027587113467268488,
+      "matchesModelEnvelope": true
+    },
+    "files": {
+      "csi300-daily.csv": "9411eda2d6052c8ec89f05ffcb2a006bb1c25a5f6a6fba26685ec8c85b78948d",
+      "factor-momentum.csv": "0f09ae00b14afe4e7d7aae7e5c7b8583e56b72f70bac697423e528de9b1de693"
+    }
+  },
+  "gapChallenges": [
+    {
+      "topic": "DSH/vendor/PandaData/官方赛事/TypeSafe缺失",
+      "decision": "agree",
+      "note": "保留既有声明，不新增P0；本轮仅本地规则、种子数据、模拟账户和HTTP mock。"
+    },
+    {
+      "topic": "共享部署成员数据不隔离",
+      "decision": "agree",
+      "note": "未在本轮实现或验证多租户隔离；005通过仅指默认来源边界。"
+    },
+    {
+      "topic": "模型回退与上下文",
+      "decision": "agree",
+      "note": "020回退承接R2，021上下文本轮实际抓包；未认证真实模型输出质量。"
+    },
+    {
+      "topic": "Cursor 8条均fixed声明",
+      "decision": "challenge",
+      "note": "只接受001/005/015/021/029/032；008/014保留同一ID反例。"
+    },
+    {
+      "topic": "默认dev需要显式授权",
+      "decision": "agree-with-product-gap",
+      "note": "安全设计正确，但默认脚本和README未接上，另列033，不要求撤销005保护。"
+    }
+  ],
+  "notRun": [
+    "iOS Safari / Android真机及其它浏览器引擎",
+    "真实付费模型质量、PandaData实时行情、官方TypeSafe/赛事CLI",
+    "实际资金、柜台成交或生产环境变更",
+    "22条历史已通过项的全部原复现逐条重做",
+    "联网干凁npm ci与依赖升级后可达性证明"
+  ],
+  "nextRegression": [
+    "P1先修014：单意图结构化解析、拒绝询问/否定/多动作；本报告三句必须不新增pending且fills不变。",
+    "P2修008闭引号状态及033开发launcher/文档；033不得用恢复默认跨来源信任来修。",
+    "保留已接受的28项、028/031延期及用户原有生产边界；回归29仓库测试、3198来源反向控制、5173开发正向控制、CSV失败不落库即可，不重做整轮同义清单。"
+  ]
+}
