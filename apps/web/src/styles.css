@@ -1,0 +1,197 @@
+@import "tailwindcss";
+@import "./mosha/mosha-card.css";
+
+@theme {
+  --color-bg: #07080c;
+  --color-panel: #0e0f14;
+  --color-elevated: #14151c;
+  --color-inset: #1c1e27;
+  --color-void: #050507;
+  --color-fg: #eceef2;
+  --color-muted: #9aa0ab;
+  --color-dim: #6d7380;
+  --color-border: rgb(255 255 255 / 0.08);
+  --color-border-strong: rgb(255 255 255 / 0.18);
+  --color-code: #c5cad3;
+  --color-accent: #d8dce4;
+  --color-accent-fg: #07080c;
+  --font-sans: "Sora", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Syne", ui-sans-serif, system-ui, sans-serif;
+  --font-mark: "Fraunces", "Times New Roman", serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+}
+
+@layer base {
+  html {
+    -webkit-font-smoothing: antialiased;
+  }
+  html,
+  body,
+  #app {
+    min-height: 100%;
+    height: 100%;
+    background: var(--color-bg);
+    color: var(--color-fg);
+    font-family: var(--font-sans);
+  }
+  button:not(:disabled),
+  [role="button"]:not(:disabled) {
+    cursor: pointer;
+  }
+}
+
+.studio-mark {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  color: var(--color-fg);
+  white-space: nowrap;
+}
+.studio-mark-num {
+  font-family: var(--font-mark);
+  font-style: italic;
+  font-weight: 500;
+  font-size: 1.7rem;
+  letter-spacing: -0.07em;
+  line-height: 0.85;
+}
+.studio-mark-rule {
+  width: 1px;
+  height: 1.15rem;
+  background: color-mix(in srgb, var(--color-fg) 26%, transparent);
+}
+.studio-mark-name {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 0.66rem;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+}
+
+.mosha-btn-primary,
+.mosha-btn-ghost {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 36px;
+  padding: 0 12px;
+  border-radius: 10px;
+  font-size: 12px;
+  font-weight: 500;
+}
+.mosha-btn-primary {
+  background: var(--color-accent);
+  color: var(--color-accent-fg);
+}
+.mosha-btn-ghost {
+  border: 1px solid var(--color-border);
+  background: transparent;
+  color: var(--color-muted);
+}
+.mosha-field {
+  width: 100%;
+  border-radius: 10px;
+  border: 1px solid var(--color-border);
+  background: var(--color-elevated);
+  padding: 8px 10px;
+  font-size: 13px;
+  color: var(--color-fg);
+}
+
+.qs-shell {
+  --mosha-bg: #08080c;
+  --mosha-radius: 26px;
+  --mosha-blur: 22px;
+  --mosha-sat: 175%;
+  --mosha-fill: 0.22;
+  --mosha-opacity: 1;
+  --mosha-border: 0.42;
+  --mosha-glow: 52px;
+  --mosha-sheen: 0.5;
+  --mosha-iris: 0.9;
+  --mosha-grain: 0.1;
+  --mosha-refract: 0;
+  --mosha-bright: 100%;
+  --mosha-contrast: 100%;
+  --mosha-thick: 0.22;
+  --mosha-chroma: 0.12;
+  --mosha-tint-0: #c4453a;
+  --mosha-tint-1: #d4a017;
+  --mosha-tint-2: #2f9b6a;
+  --mosha-tint-3: #2f7eb8;
+  min-height: 100dvh;
+  display: grid;
+  grid-template-columns: 228px 1fr;
+  position: relative;
+  isolation: isolate;
+}
+.qs-shell > .mosha-ambient {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+}
+.qs-shell > * {
+  position: relative;
+  z-index: 1;
+}
+@media (max-width: 900px) {
+  .qs-shell {
+    grid-template-columns: 1fr;
+  }
+  .qs-nav {
+    display: none;
+  }
+}
+
+.qs-panel {
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--mosha-radius, 26px);
+  --tint: #6b7c93;
+}
+.qs-panel .mosha-card-spin {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-height: 96px;
+  translate: none;
+  transform: none;
+}
+.qs-panel .mosha-card-body {
+  pointer-events: auto;
+  padding: 16px 18px;
+}
+.qs-nav a.active {
+  color: var(--color-fg);
+  background: rgb(255 255 255 / 0.08);
+}
+.qs-table {
+  width: 100%;
+  font-size: 12px;
+  border-collapse: collapse;
+}
+.qs-table th,
+.qs-table td {
+  text-align: left;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--color-border);
+  color: var(--color-muted);
+}
+.qs-table th {
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mosha-card,
+  .mosha-card-spin,
+  .mosha-card-cast {
+    transition: none !important;
+    animation: none !important;
+  }
+}
