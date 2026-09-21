@@ -476,7 +476,7 @@
       "actual": "真实Chrome界面加载但新建会话显示forbidden-origin；会话数量不变。C:dev-exact.json记录命令为npm run dev；B/C的dev:web同API对照也一致。正常3198与显式opt-in控制通过。",
       "cause": "005安全修复将5173/4173改为显式opt-in，但dev脚本没有启用该模式，README仍只给裸npm run dev。",
       "fix": "将精确开发来源授权接到开发launcher/脚本，或将README及启动提示改成可执行的显式opt-in流程，并补端到端写入测试。禁止恢复普通启动对5173/4173的无条件信任。",
-      "regression": "干凁环境裸命令或更新后的文档命令实际新建/发送/保存设置成功；独立普通npm start仍阻断5173/4173的读取、写入和confirm。",
+      "regression": "干净环境裸命令或更新后的文档命令实际新建/发送/保存设置成功；独立普通npm start仍阻断5173/4173的读取、写入和confirm。",
       "evidence": [
         "C:dev-exact.json",
         "C:r3-dev-exact.png",
@@ -493,12 +493,12 @@
       "title": "依赖告警未消除，延期不等于安全豁免",
       "path": "package.json; apps/web/package.json; npm audit",
       "repro": [
-        "冻结版本干凁npm install。",
+        "冻结版本干净npm install。",
         "npm audit --json；npm audit --prefix apps/web --json。"
       ],
       "expected": "明确未修风险与实际可达性；升级与回归另有责任人、退出条件。",
       "actual": "本轮扫描root仍有2个critical依赖条目，web仍有2个high依赖条目。不是4个独立漏洞；本轮未证明实际RCE，也没有证明全部公告不可达。",
-      "fix": "保持deferred，Simon Wu/产品与Cursor Quant/实现责责；单独升级相关依赖，核对公告可达性并回归dev/路由/构建，不以未证明RCE作永久豁免。",
+      "fix": "保持deferred，Simon Wu/产品与Cursor Quant/实现负责；单独升级相关依赖，核对公告可达性并回归dev/路由/构建，不以未证明RCE作永久豁免。",
       "regression": "升级后npm audit、npm run dev、build、路由前进后退/刷新。",
       "evidence": [
         "A:evidence/npm-audit-root.json",
@@ -513,13 +513,13 @@
       "title": "完整前端锁文件与构建目录忽略仍延期",
       "path": "apps/web/package-lock.json; .gitignore",
       "repro": [
-        "干凁npm install && npm run build。",
+        "干净npm install && npm run build。",
         "检查git status --short与前端锁文件条目。"
       ],
       "expected": "可重复安装，构建目录不会误提交；已修好的端口提示不重复列为未修。",
       "actual": "安装仍修改apps/web/package-lock.json，构建产生未忽略的apps/web/dist/。端口提示承接R2已修。本地额外npm ci --offline因ENOTCACHED中断，不能当作锁文件错误的独立证明。",
-      "fix": "保持deferred，Simon Wu/产品与Cursor Quant/实现责责；提交完整web锁文件、补dist忽略，在联网干凁目录npm ci复验；保留已修端口提示。",
-      "regression": "干凁npm ci、build、git状态；无bundle与端口占用提示保持。",
+      "fix": "保持deferred，Simon Wu/产品与Cursor Quant/实现负责；提交完整web锁文件、补dist忽略，在联网干净目录npm ci复验；保留已修端口提示。",
+      "regression": "干净npm ci、build、git状态；无bundle与端口占用提示保持。",
       "evidence": [
         "A:evidence/install-working-tree.txt",
         "frozen source lockfile/.gitignore"
@@ -650,7 +650,7 @@
     "真实付费模型质量、PandaData实时行情、官方TypeSafe/赛事CLI",
     "实际资金、柜台成交或生产环境变更",
     "22条历史已通过项的全部原复现逐条重做",
-    "联网干凁npm ci与依赖升级后可达性证明"
+    "联网干净npm ci与依赖升级后可达性证明"
   ],
   "nextRegression": [
     "P1先修014：单意图结构化解析、拒绝询问/否定/多动作；本报告三句必须不新增pending且fills不变。",
