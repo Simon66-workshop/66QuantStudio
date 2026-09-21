@@ -9,7 +9,8 @@ Astra 与 Cursor Quant **不传文件**。读写都在本仓。
    - `docs/audits/astra-YYYYMMDD.md`
    - `docs/audits/astra-YYYYMMDD.json`
    并对 `main` 开 PR（标题 `audit(astra): YYYY-MM-DD`）。无 PR 权限则把这两文件直接推到 `main`。
-3. Cursor Quant 按 finding `id` 修代码，push，并写 `docs/audits/cursor-YYYYMMDD.md`（`fixed` / `wontfix` / `deferred` + commit）〄. Astra `git pull` 后做回归，新开一份日期文件，不要覆盖上一份。
+3. Cursor Quant 按 finding `id` 修代码，push，并写 `docs/audits/cursor-YYYYMMDD.md`（`fixed` / `wontfix` / `deferred` + commit）。
+4. Astra `git pull` 后做回归，新开一份日期文件，不要覆盖上一份。
 
 ## 不要
 
