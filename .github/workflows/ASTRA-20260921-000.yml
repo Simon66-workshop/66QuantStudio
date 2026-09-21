@@ -1,66 +1,103 @@
-name: Astra isolated baseline verification
+name: Astra publish verified audit reports
 on:
   push:
     branches: [audit/astra-20260921]
     paths: [.github/workflows/ASTRA-20260921-000.yml]
 permissions:
-  contents: read
+  contents: write
 jobs:
-  baseline:
+  publish:
     runs-on: ubuntu-latest
-    timeout-minutes: 12
+    timeout-minutes: 5
     steps:
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v4
         with:
-          node-version: '22.16.0'
-      - name: Clone frozen product and design reference
+          ref: audit/astra-20260921
+          fetch-depth: 0
+      - name: Verify branch ownership and retrieve finalized findings blob
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
-          mkdir -p "$RUNNER_TEMP/astra/evidence"
-          cd "$RUNNER_TEMP/astra"
-          git clone https://github.com/Simon66-workshop/66QuantStudio.git
-          cd 66QuantStudio
-          git show 907766faa721c9adee212bcc454ded9a851e44fa:docs/audits/ASTRA-20260921-000.mjs > ../ui-audit.mjs
-          git checkout --detach ac3b8915488da0664d78a4b19afb262636735bbe
-          git rev-parse HEAD > ../evidence/base-sha.txt
-          cd ..
-          git clone https://github.com/Simon66-workshop/mosha-card-ui.git
-          git -C mosha-card-ui checkout --detach 7abd3b0b811f483f8d172f15e843836496824b3f
-          git -C mosha-card-ui rev-parse HEAD > evidence/mosha-sha.txt
-      - name: Install test and build unmodified product
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          test "$(git branch --show-current)" = 'audit/astra-20260921'
+          gh api repos/Simon66-workshop/66QuantStudio/git/blobs/cca7743093b3b1d73b8085268036501f84829e50 > "$RUNNER_TEMP/astra-final-blob.json"
+      - name: Render Markdown from validated JSON without modifying product
+        env:
+          ASTRA_BLOB: ${{ runner.temp }}/astra-final-blob.json
         run: |
-          cd "$RUNNER_TEMP/astra/66QuantStudio"
-          { uname -a; node --version; npm --version; date -u +%FT%TZ; } > ../evidence/environment.txt
-          npm install > ../evidence/npm-install.log 2>&1
-          npm test > ../evidence/npm-test.log 2>&1
-          npm run build > ../evidence/npm-build.log 2>&1
-      - name: Prepare isolated browser with Chinese fonts
+          python3 - <<'PY'
+          import os,json,base64,pathlib,subprocess,collections,hashlib
+          base='ac3b8915488da0664d78a4b19afb262636735bbe'
+          temporary={'.github/workflows/ASTRA-20260921-000.yml','docs/audits/ASTRA-20260921-000.mjs'}
+          changed=set(subprocess.check_output(['git','diff','--name-only',base,'HEAD'],text=True).splitlines())
+          assert changed==temporary,changed
+          b=json.loads(pathlib.Path(os.environ['ASTRA_BLOB']).read_text())
+          raw=base64.b64decode(b['content']);d=json.loads(raw)
+          assert d['baseSha']==base and d['auditor']=='astra' and d['date']=='2026-09-21'
+          f=d['findings'];assert len(f)==31
+          ids=[x['id'] for x in f]
+          assert ids==[f'ASTRA-20260921-{i:03d}' for i in range(1,32)]
+          for x in f:
+            assert x['severity'] in ('P0','P1','P2','P3')
+            assert x['gate'] in ('product','design','backend','security','data')
+            for k in ('title','path','repro','expected','actual','fix','regression','evidence','status'):assert x[k],(x['id'],k)
+            assert x['status']=='open'
+          counts=collections.Counter(x['severity'] for x in f)
+          gates={'product':'产品','design':'设计','backend':'后端','security':'安全','data':'数据'}
+          repo='https://github.com/Simon66-workshop/66QuantStudio'
+          md=['# Astra 审计 2026-09-21','',f'- 仓库：{repo}',f'- 固定 main SHA：`{base}`。所有产品代码位置均指此版本。',f'- Mosha 对照：`Simon66-workshop/mosha-card-ui@{d["designReference"]["sha"]}`。','- 环境：GitHub Actions Ubuntu Linux，Node 22.16.0，npm 10.9.2，Chrome 152.0.7977.82，Playwright 1.55.1；视口 1440×1000 / 390×844 / 768×844。','- 原始命令：真实 clone → npm install → npm test（6/6）→ npm run build → npm start，均成功；真实浏览器打开并点击 http://127.0.0.1:3198/。','- 结论：**FAIL，不能把“可启动、6/6”当作可交付验收通过。**',f'- Findings：31 项；P0={counts["P0"]}，P1={counts["P1"]}，P2={counts["P2"]}，P3={counts["P3"]}。','', '## 先看打开就能发现的问题','', '首页扇形卡底边被裁切，透明叠层把相邻文字叠在一起，悬停又不能像 Mosha 参考一样把目标卡单独提出来（001）。窄屏直接藏掉整个导航，却没有移动菜单，数据库和设置等栏目因此没有可用入口（002）。设置的七个玻璃预设看似保存成功，回到首页却始终是同一套效果（003）。进入会话后，“发送”两个字还被挤成上下两行（004）。这些不是用户操作错，也不是缺 DSH、PandaData 或 TypeSafe 凭证；在本次干净安装中即可复现。进一步测试还发现跨来源写入/确认、畸形请求导致进程退出、并发状态损坏和错误统计，故五条闸门均不能给整体 PASS。','', '| 首屏问题 | 实测证据 |','|---|---|','| 001 卡片裁切与透叠 | B / desktop-home.png、mobile-390.png；C / mosha-reference-hover.png |','| 002 移动导航消失 | B / mobile-390.png、mobile-768.png |','| 003 预设无渲染变化 | B / browser-results.json / 05-preset-controls |','| 004 发送按钮竖排 | B / factor-report.png；C / composer-squeezed-label |','', '## 证据、运行边界与复现入口','',d['environment']['localLimit'],'', 'A 是首次启动和命令证据；B 是有中文字库后的完整 UI 扫描；C 是遗漏控件补测、Mosha 实际对照和独立算法/并发探针。**审计步骤 completed 或 Actions success 只表示探针完成，不表示被测产品通过。** 首轮收藏使用了错误的测试选择器，C 已改用实际“收藏/取消”按钮补测通过；不把该超时当产品缺陷。C 中专家/团队截图抓取过早仍显示列表，不用这些截图证明详情页坏；实际后退、前进、刷新和专属/团队开会话动作已执行。','']
+          for key in ('A','B','C'):
+            e=d['evidence'][key]
+            md += [f'### 证据包 {key}',f'- Run：[GitHub Actions {e["runId"]}]({e["url"]})',f'- Artifact：`{e["name"]}`，ID `{e["artifactId"]}`，到期 `{e["expires"]}`。',f'- ZIP SHA-256：`{e["zipSha256"]}`。']
+            if 'harnessCommit' in e:
+              sha=e['harnessCommit'];md += [f'- 冻结审计脚本：[ASTRA-20260921-000.mjs]({repo}/blob/{sha}/docs/audits/ASTRA-20260921-000.mjs)。']
+            md += ['']
+          md += ['截图/log/结果 JSON 位于上述 artifact，B/C 含 SHA256SUMS.txt。Artifact 有期限；不可把临时下载地址当永久证据，脚本和本报告中的输入/输出可在固定版本重新复现。本地补充 L 的原始文件未额外推入仓库，以下有关 L 的条目给出具体输入、进程结果或计算值，不伪造仓库文件链接。','', '本轮最终提交相对固定 main 的净差异只有这份 Markdown 与同名 JSON；产品代码没有修复。临时审计 workflow/runner 已从最终树移除，其历史 SHA 用于证据追溯；不改 docs/task-report.md，不提交依赖、dist、密钥或 vendor。','', '### 五条闸门结果','', '| 闸门 | 结论 | 已成立与未成立的边界 |','|---|---|','| 产品 | FAIL | 四入口、基本会话/报告、导入及模拟确认流程可运行；上传文件选择、模型连续上下文、移动导航等主路径坏。 |','| 设计 | FAIL | 真正复用了 Mosha 光学层，不是另换皮肤；响应式、聚焦交互和设置消费不完整。 |','| 后端 | FAIL | health/构建/原有单测通过；并发持久化、计划状态机和账本不可靠。 |','| 安全 | FAIL | 转义、CSP、nosniff、密钥脱敏等部分成立；跨 Origin 写入和单请求进程崩溃是新问题。 |','| 数据 | FAIL | 种子算术可独立复算；合法 CSV、缺数、零方差和排序边界会产生错误或不可见缺口。 |','', '## 阻塞（P0）','']
+          def finding(x):
+            z=[f'### {x["id"]} {x["title"]}','',f'- 闸门：{gates[x["gate"]]}；严重度：**{x["severity"]}**；状态：`open`。',f'- 位置：`{x["path"]}`。','', '**复现**','']
+            z += [f'{i}. {s}' for i,s in enumerate(x['repro'],1)]
+            z += ['',f'**期望：** {x["expected"]}', '',f'**实际：** {x["actual"]}', '',f'**修改建议：** {x["fix"]}', '',f'**建议补测试：** {x["regression"]}', '',f'**证据：** '+ '；'.join(x['evidence'])+'。','']
+            return z
+          for sev,title in [('P0',None),('P1','严重（P1）'),('P2','一般（P2）'),('P3','建议（P3）')]:
+            if title:md += [f'## {title}','']
+            for x in f:
+              if x['severity']==sev:md += finding(x)
+          md += ['## 声明缺口核对','', '不把上游未集成、没有外部凭证和紧凑快照重复计成新 P0。','']
+          for g in d['gapChallenges']:
+            md += [f'### {g["gap"]} — `{g["verdict"]}`',g['evidence'],'']
+          md += ['## 已通过的具体检查与不能外推的部分','', '### 数据独立复算','', '用 Python csv + statistics 对仓内原始 CSV 独立计算，而不是读取产品声称的数字：CSI300 表 420 行，最后日期 2025-08-11，最后 close=4226.65，按时间顺序运行峰值计算最大回撤 -0.04595874922021215（-4.595874922%）。因子表 640 行，80 个日期截面，每截面 8 行；逐日 Pearson 的均值 0.935314813971839，样本标准差 0.027587113467268488，均值/标准差=33.904047811365615，与基线报告舍入值一致。','', '这些只是**仓内表的算术一致性**，不是实盘行情真实性认证、因子有效性验证或胜率。无外部行情请求；没有用2025年的末行伪称2026年的实时行情。空表 empty-table 测试通过；研究免责声明存在。零方差、缺数与少截面报告的问题仍见009—012，不能被正常种子样本的正确结果抵消。','', '### Mosha 逐项对照','', '在指定参考 SHA 实际打开 demo/cards.html 并悬停截图。产品复制的 store.ts、defaults.ts、symbols.ts、recipe.ts、types.ts、validation.ts、export.ts、mosha-card.css 共8文件与参考逐字节一致；CSS SHA-256 为 `2e93fc1d93ba0a1e0aa060c4f9a9b8bbc17c100beab7ca4a5e1b62c6244ae487`。#07080c 背景、Sora/Syne/Fraunces 字体声明和7个中文预设标签都在。sheen/rim/grain/chroma/depth 光学层确实存在；首次 runner 缺中文字库造成的方框是测试环境问题，未归罪产品。','', '参考集成约定：[INTEGRATION.md](https://github.com/Simon66-workshop/mosha-card-ui/blob/7abd3b0b811f483f8d172f15e843836496824b3f/docs/INTEGRATION.md)。参考有响应式尺度与交互状态；产品只保留静态扇形和点击导航。reduced-motion 下实测卡片 animation=none、transition=0s，但这不等于完整键盘/触摸/视觉可达性已获认证，更不等于Safari验证。','', '### 基本产品与安全正例','', '四张首页卡实际点击后分别进入普通会话、专家团、比赛、技能。目录计数15/44/14成立；这只认证目录计数，不认证15种技能和44种专家均可真实执行。因子技能能打开SKILL.md，发送后右侧HTML能显示；普通空输入不发送。workspace名称保存并刷新有效；收藏切换与持久化有效，不能据此忽略收藏列表不可导航。QUBE/EVO的href、_blank、noreferrer已检查，未嵌入第三方账号；外部站点内部功能没有验收。','', '正常模拟赛流程：pending时fills=0，确认后fills=1，第二笔取消后fills仍为1；停止能取消未确认Jev计划。没有真实交易、真实模型凭证或付费调用。005证明的是另一loopback网页来源可绕过工作台的交互确认，不把它外推为所有互联网网页均能利用。','', '合成模型/TypeSafe密钥在GET settings和bootstrap中仅返回hasKey/last4，没有完整值。runtime与.env受gitignore；源码83个跟踪文件和固定基线53个提交的provider-shaped key/private-key标记扫描未命中，这不等于绝对没有任何秘密的保证。转义函数的现有测试通过，报告生成路径做静态核验；未进行穷尽XSS攻击测试。CSP/nosniff存在。编码穿越路径400；明文../先被URL规范化为404，未返回文件，属于与SOP指定400的状态码偏差而非已证明的任意文件读。原型污染形状输入可进入appearance的自有字段，但未证明污染全局原型，不把它报为可利用污染。','', '### 依赖公告边界','', '两层npm audit原始JSON留在B。根树concurrently/shell-quote为2个受影响包计数，web树react-router-dom/react-router为2个包计数，不等于4个独立漏洞。核对[GHSA-w7jw-789q-3m8p](https://github.com/advisories/GHSA-w7jw-789q-3m8p)的输入/执行前提；[GHSA-2w69-qvjg-hvjx](https://github.com/advisories/GHSA-2w69-qvjg-hvjx)明确不影响声明式BrowserRouter模式。没有把告警最高级别直接写成本应用已被RCE。修复建议由Cursor做版本升级及可达性复核，不在本审计偷偷更新包。','', '## 未执行与适用边界','']
+          md += [f'- {s}。' for s in d['notRun']]
+          md += ['', '## 回归范围（给 Cursor）','', '先保持本次固定基线与findings ID。针对每个ID回复fixed/wontfix/deferred和固定修复SHA；不要用一份总PASS覆盖未修条目。','', '**第一批：安全与数据保存。** 修005/006后用真实不同Origin和raw HTTP验证拒绝与进程存活；修007后并发写入、落盘失败、重启均不丢已确认数据。暂不开放共享网络，不能把隐藏按钮当服务器授权。','', '**第二批：分析和模拟账本。** 008—013用正常种子+合法复杂CSV+坏CSV+缺数+无序+零方差+少截面+指定上传文件逐项回归。014—017用不同合约方向数量、撤单、两次加仓、开空、过期和断开账户验证计划与账本不变量；只有明确确认才可产生模拟fill。','', '**第三批：模型与界面。** 使用本地mock而非付费API验证019—023的URL路径、历史上下文、配置回填、失败来源、幂等与可见错误；保留真实提供商验证为单独状态。然后点完首页四卡、技能/专家/团队详情、会话、数据库、收藏、比赛/Jev、QUBE/EVO和设置。','', '**视图矩阵：** 1440×1000、390×844、768×844，并在900/901断点两侧检查导航；检查新建→列表→会话→报告→刷新→前进后退，7预设与背景开关、长输入和发送中按钮。保持Mosha参考，不另换皮肤来掩盖问题。','', '**继续条件：** P0清零，P1主路径通过独立复现；每一残留P2/P3有明确处置与产品边界。**修改条件：** 任务只定位本地演示时可以减少能力，但必须移除失真的运行中、安装完成、统计可用等暗示。**停止发布条件：** 仍可跨来源写入、单请求杀进程、丢已保存数据或输出未标注的错误统计。','', '对已复现问题的判断置信度高；并发问题已在两个环境出现，但样本频率不是生产故障概率。真实供应商、真实用户云桌面与跨浏览器业务验收保持UNKNOWN。下一轮只复验已修ID及新变化，不重新堆一份重复审计清单。','', '**什么现实证据能够证明这个判断是错的？** 在相同固定输入和环境上给出相反的独立可重现结果，或证明产品已发布的范围/前置条件排除了对应输入，并在UI与服务器同时强制了该条件；仅有开发者口头说明或6/6单测不构成反证。','']
+          text='\n'.join(md)
+          for fid in ids: assert text.count('### '+fid+' ')==1,fid
+          for name in temporary:pathlib.Path(name).unlink()
+          target=pathlib.Path('docs/audits');target.mkdir(parents=True,exist_ok=True)
+          (target/'astra-20260921.json').write_bytes(raw)
+          (target/'astra-20260921.md').write_text(text,encoding='utf-8')
+          print(json.dumps({'findings':len(f),'severityCounts':counts,'gates':sorted(set(x['gate'] for x in f)),'jsonSha256':hashlib.sha256(raw).hexdigest(),'mdSha256':hashlib.sha256(text.encode()).hexdigest()},ensure_ascii=False))
+          PY
+      - name: Verify exact net diff, commit and push audit branch only
         run: |
-          sudo apt-get update -qq
-          sudo apt-get install -y fonts-noto-cjk
-          mkdir -p "$RUNNER_TEMP/astra/browser"
-          npm install --prefix "$RUNNER_TEMP/astra/browser" playwright@1.55.1
-      - name: Browser follow-up and independent engine edge tests
-        run: |
-          cd "$RUNNER_TEMP/astra/66QuantStudio"
-          mv server/runtime ../runtime-after-unit-tests
-          npm start > ../evidence/npm-start.log 2>&1 &
-          SERVER_PID=$!
-          trap 'kill "$SERVER_PID" 2>/dev/null || true' EXIT
-          for i in $(seq 1 30); do
-            curl -sf http://127.0.0.1:3198/api/health > ../evidence/health.json && break
-            sleep 1
-          done
-          export ASTRA_PLAYWRIGHT="$RUNNER_TEMP/astra/browser/node_modules/playwright/index.mjs"
-          export ASTRA_OUT="$RUNNER_TEMP/astra/evidence"
-          node "$RUNNER_TEMP/astra/ui-audit.mjs" > ../evidence/followup-harness.log 2>&1
-      - name: Hash evidence
-        if: always()
-        run: |
-          cd "$RUNNER_TEMP/astra/evidence"
-          find . -type f ! -name SHA256SUMS.txt -print0 | sort -z | xargs -0 sha256sum > SHA256SUMS.txt
+          git add docs/audits/astra-20260921.md docs/audits/astra-20260921.json
+          git add -u .github/workflows/ASTRA-20260921-000.yml docs/audits/ASTRA-20260921-000.mjs
+          python3 - <<'PY'
+          import subprocess
+          names=set(subprocess.check_output(['git','diff','--cached','--name-only','ac3b8915488da0664d78a4b19afb262636735bbe'],text=True).splitlines())
+          assert names=={'docs/audits/astra-20260921.md','docs/audits/astra-20260921.json'},names
+          PY
+          git diff --cached --check
+          test "$(git ls-remote origin refs/heads/audit/astra-20260921 | cut -f1)" = "$GITHUB_SHA"
+          git config user.name 'Astra audit (GitHub Actions)'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git commit -m 'audit(astra): 2026-09-21 全量审计'
+          git push origin HEAD:refs/heads/audit/astra-20260921
+          git rev-parse HEAD > "$RUNNER_TEMP/astra-final-commit.txt"
+          git diff --name-status ac3b8915488da0664d78a4b19afb262636735bbe HEAD
       - uses: actions/upload-artifact@v4
-        if: always()
         with:
-          name: astra-20260921-followup
-          path: ${{ runner.temp }}/astra/evidence/
+          name: astra-20260921-final-reports
+          path: |
+            docs/audits/astra-20260921.md
+            docs/audits/astra-20260921.json
+            ${{ runner.temp }}/astra-final-commit.txt
           retention-days: 30
