@@ -12,6 +12,7 @@ export function SkillsPage() {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [q, setQ] = useState("");
+  const [error, setError] = useState<string | null>(null);
   const items = (snap?.catalog.skills || []).filter((s) => `${s.name}${s.description}`.includes(q));
   return (
     <Catalog
@@ -24,12 +25,18 @@ export function SkillsPage() {
           className="grid gap-2 md:grid-cols-3"
           onSubmit={async (e) => {
             e.preventDefault();
-            await api.createSkill({ name, description, steps: description });
-            setName("");
-            setDescription("");
-            await refresh();
+            setError(null);
+            try {
+              await api.createSkill({ name, description, steps: description });
+              setName("");
+              setDescription("");
+              await refresh();
+            } catch (err) {
+              setError(err instanceof Error ? err.message : "create-failed");
+            }
           }}
         >
+          {error ? <p className="qs-error md:col-span-3">{error}</p> : null}
           <input className="mosha-field" placeholder="一句话创建技能名称" value={name} onChange={(e) => setName(e.target.value)} />
           <input className="mosha-field" placeholder="步骤与工具约定" value={description} onChange={(e) => setDescription(e.target.value)} />
           <button className="mosha-btn-primary" type="submit">
@@ -58,23 +65,56 @@ export function SkillDetailPage() {
   const nav = useNavigate();
   const skill = snap?.catalog.skills.find((s) => s.id === id);
   const [md, setMd] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const fav = snap?.favorites?.some((f) => f.kind === "skill" && f.id === id);
+  if (!skill) {
+    return (
+      <Detail kicker="SKILL" title="未找到技能" body="这个技能不在当前目录里，不能假装可执行。">
+        <p className="qs-error">未知技能 {id}</p>
+      </Detail>
+    );
+  }
   return (
     <Detail
       kicker="SKILL"
-      title={skill?.name || id}
-      body={skill?.summary || skill?.description || ""}
+      title={skill.name}
+      body={skill.summary || skill.description || ""}
       actions={
         <>
-          <button
-            className="mosha-btn-primary"
-            onClick={async () => {
-              const conv = await api.startConversation({ kind: "skill", title: skill?.name, skillId: id });
-              nav(`/conversations/${conv.id}`);
-            }}
-          >
-            用此技能开始会话
-          </button>
-          {skill?.path ? (
+          {error ? <p className="qs-error w-full">{error}</p> : null}
+          {skill.installed ? (
+            <button
+              className="mosha-btn-primary"
+              onClick={async () => {
+                setError(null);
+                try {
+                  const conv = await api.startConversation({ kind: "skill", title: skill.name, skillId: id });
+                  await refresh();
+                  nav(`/conversations/${conv.id}`);
+                } catch (err) {
+                  setError(err instanceof Error ? err.message : "start-failed");
+                }
+              }}
+            >
+              用此技能开始会话
+            </button>
+          ) : (
+            <button
+              className="mosha-btn-primary"
+              onClick={async () => {
+                setError(null);
+                try {
+                  await api.installSkill(id);
+                  await refresh();
+                } catch (err) {
+                  setError(err instanceof Error ? err.message : "install-failed");
+                }
+              }}
+            >
+              重新安装
+            </button>
+          )}
+          {skill.path ? (
             <button className="mosha-btn-ghost" onClick={async () => setMd((await api.skillSource(id)).markdown)}>
               查看 SKILL.md
             </button>
@@ -82,13 +122,24 @@ export function SkillDetailPage() {
           <button
             className="mosha-btn-ghost"
             onClick={async () => {
-              await api.uninstallSkill(id);
+              await api.favorite({ kind: "skill", id: skill.id, name: skill.name });
               await refresh();
-              nav("/skills");
             }}
           >
-            卸载
+            {fav ? "取消收藏" : "收藏"}
           </button>
+          {skill.installed ? (
+            <button
+              className="mosha-btn-ghost"
+              onClick={async () => {
+                await api.uninstallSkill(id);
+                await refresh();
+                nav("/skills");
+              }}
+            >
+              卸载
+            </button>
+          ) : null}
         </>
       }
     >
@@ -109,7 +160,7 @@ export function ExpertsPage() {
           <GlassPanel tint="#c4453a">
             <p className="mosha-card-code">{(e.skills || []).join(" · ") || "role"}</p>
             <h3 className="mt-2 text-base font-semibold">{e.name}</h3>
-            <p className="mt-1 line-clamp-3 text-xs text-muted">{e.excerpt}</p>
+            <p className="mt-1 line-clamp-3 text-xs text-muted">{e.excerpt || "快照未包含职责摘要。"}</p>
           </GlassPanel>
         </button>
       ))}
@@ -120,23 +171,40 @@ export function ExpertsPage() {
 export function ExpertDetailPage() {
   const { id = "" } = useParams();
   const snap = useStudioData((s) => s.snapshot);
+  const refresh = useStudioData((s) => s.refresh);
   const nav = useNavigate();
   const expert = snap?.catalog.experts.find((s) => s.id === id);
+  const fav = snap?.favorites?.some((f) => f.kind === "expert" && f.id === id);
+  if (!expert) {
+    return <Detail kicker="EXPERT" title="未找到专家" body="这个专家不在当前目录快照里。" />;
+  }
   return (
     <Detail
       kicker="EXPERT"
-      title={expert?.name || id}
-      body={expert?.excerpt || ""}
+      title={expert.name}
+      body={expert.excerpt || "紧凑目录快照未包含职责摘要，不能把空壳当成已验证的协作能力。"}
       actions={
-        <button
-          className="mosha-btn-primary"
-          onClick={async () => {
-            const conv = await api.startConversation({ kind: "expert", title: expert?.name, expertId: id });
-            nav(`/conversations/${conv.id}`);
-          }}
-        >
-          开始专属对话
-        </button>
+        <>
+          <button
+            className="mosha-btn-primary"
+            onClick={async () => {
+              const conv = await api.startConversation({ kind: "expert", title: expert.name, expertId: id });
+              await refresh();
+              nav(`/conversations/${conv.id}`);
+            }}
+          >
+            开始专属对话
+          </button>
+          <button
+            className="mosha-btn-ghost"
+            onClick={async () => {
+              await api.favorite({ kind: "expert", id: expert.id, name: expert.name });
+              await refresh();
+            }}
+          >
+            {fav ? "取消收藏" : "收藏"}
+          </button>
+        </>
       }
     />
   );
@@ -152,7 +220,7 @@ export function TeamsPage() {
       {items.map((t) => (
         <button key={t.id} className="text-left" onClick={() => nav(`/teams/${t.id}`)}>
           <GlassPanel tint="#2f9b6a">
-            <p className="mosha-card-code">lead · {t.lead?.name}</p>
+            <p className="mosha-card-code">{t.lead?.name ? `lead · ${t.lead.name}` : "快照未包含 LEAD"}</p>
             <h3 className="mt-2 text-base font-semibold">{t.name}</h3>
             <p className="mt-1 line-clamp-3 text-xs text-muted">{t.description}</p>
           </GlassPanel>
@@ -165,18 +233,23 @@ export function TeamsPage() {
 export function TeamDetailPage() {
   const { id = "" } = useParams();
   const snap = useStudioData((s) => s.snapshot);
+  const refresh = useStudioData((s) => s.refresh);
   const nav = useNavigate();
   const team = snap?.catalog.teams.find((s) => s.id === id);
+  if (!team) {
+    return <Detail kicker="TEAM" title="未找到专家团" body="这个专家团不在当前目录快照里。" />;
+  }
   return (
     <Detail
       kicker="TEAM"
-      title={team?.name || id}
-      body={team?.description || ""}
+      title={team.name}
+      body={team.description || "紧凑目录快照未包含团队说明。"}
       actions={
         <button
           className="mosha-btn-primary"
           onClick={async () => {
-            const conv = await api.startConversation({ kind: "team", title: team?.name, teamId: id });
+            const conv = await api.startConversation({ kind: "team", title: team.name, teamId: id });
+            await refresh();
             nav(`/conversations/${conv.id}`);
           }}
         >
@@ -184,10 +257,14 @@ export function TeamDetailPage() {
         </button>
       }
     >
+      <p className="mb-2 text-xs text-muted">
+        {team.lead?.name ? `LEAD · ${team.lead.name}` : "快照未包含 LEAD 姓名，不能把它当成已验证的协作能力。"}
+      </p>
       <ul className="space-y-2 text-sm text-muted">
-        {(team?.members || []).map((m) => (
-          <li key={m.id}>
-            <strong className="text-fg">{m.name}</strong> · {m.excerpt}
+        {(team.members || []).length === 0 ? <li>快照未包含成员名单。</li> : null}
+        {(team.members || []).map((m) => (
+          <li key={m.id || m.name}>
+            <strong className="text-fg">{m.name}</strong> · {m.excerpt || "快照未包含职责"}
           </li>
         ))}
       </ul>
