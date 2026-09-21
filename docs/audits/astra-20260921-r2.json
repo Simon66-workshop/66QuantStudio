@@ -1,0 +1,767 @@
+{
+  "auditor": "astra",
+  "date": "2026-09-21",
+  "round": "R2",
+  "repo": "Simon66-workshop/66QuantStudio",
+  "baseSha": "a0a1213bad9df74aa561ea2a8e2814b987fc2137",
+  "previousBaseSha": "ac3b8915488da0664d78a4b19afb262636735bbe",
+  "previousReport": "docs/audits/astra-20260921.json",
+  "cursorResponse": "docs/audits/cursor-20260921.md",
+  "verdict": "CHANGES_REQUIRED",
+  "counts": {
+    "claimedFixed": 29,
+    "verifiedFixed": 22,
+    "partial": 7,
+    "deferred": 2,
+    "new": 1
+  },
+  "summary": "桌面卡片已能独立抬起，原裁切问题不再复现；390/768菜单能打开数据库、设置等十个入口，发送按钮也不再竖排。这些改善接受。仍然一眼可见的是390px首页：520px高的区域内卡片整体缩到约0.394，正文视觉字号约4.33px，聚焦也未恢复可读。新增032：关闭比赛后确认按钮仍可点，后端正确拒绝但页面没有错误说明。更重要的剩余反例是默认信任的无关5173来源能确认模拟计划，以及只有多仓时平空却减多仓。模型已收到历史，但仍未收到右侧报告数据，合法长输入进入模型前仍被截到4000字符。29条fixed不能整体接受；22条复验通过、7条部分修复、028/031延期，另有1条新发现。",
+  "scope": "只复验原001—031修复/延期及新增的相邻错误路径032。不修改产品代码，不继承Cursor的完成结论，不做真实交易或实际付费模型调用。同日-r2文件/分支用于保留原报告，符合docs/audits/README.md不得覆盖历史的约定。",
+  "environment": {
+    "node": "22.16.0",
+    "npm": "10.9.2",
+    "os": "Ubuntu Linux x86_64, kernel 6.17.0-1022-azure",
+    "browser": "Chrome 152.0.7977.82 / Playwright 1.55",
+    "url": "http://127.0.0.1:3198/",
+    "viewports": [
+      "1440x1000",
+      "390x844",
+      "768x844"
+    ],
+    "acquisition": "容器直接clone发生GitHub DNS解析失败；授权GitHub Actions实际clone、git pull --ff-only、detach冻结SHA、安装/测试/构建/启动；下载并校验artifact，使用git bundle在本地重建同版源码。没有要求用户传文件。",
+    "browserBoundary": "容器本地Chromium访问3198被管理策略返回net::ERR_BLOCKED_BY_ADMINISTRATOR，未绕过；本轮真实点击在GitHub Actions Chrome完成，仍使用所要求的127.0.0.1:3198。无Browser插件，使用常规Playwright。这不是用户电脑或iPhone真机验收。"
+  },
+  "commands": {
+    "freshRunner": {
+      "gitClonePull": "completed; frozen at baseSha",
+      "npm install": {
+        "exit": 0
+      },
+      "npm test": {
+        "exit": 0,
+        "pass": 22,
+        "fail": 0
+      },
+      "npm run build": {
+        "exit": 0
+      },
+      "npm start": "health ok:true, UI opened"
+    },
+    "independentLocal": {
+      "npm test": {
+        "exit": 0,
+        "pass": 22,
+        "fail": 0
+      },
+      "npm run build": {
+        "exit": 0
+      },
+      "npm start": "health ok:true; independent Node/HTTP fixtures executed"
+    },
+    "browser": {
+      "B": "20/20 scenarios executed; not a product-pass count",
+      "C": "6/6 focused scenarios executed; includes deliberately reproduced failures",
+      "pageErrorsB": [],
+      "pageErrorsC": [
+        "contest-offline, deliberate reproduction of 032"
+      ]
+    }
+  },
+  "designReference": {
+    "repo": "Simon66-workshop/mosha-card-ui",
+    "sha": "7abd3b0b811f483f8d172f15e843836496824b3f",
+    "page": "demo/cards.html",
+    "actualRender": "参考页面和产品均实际打开并悬停，hand进入is-isolating；截图已核对。",
+    "sourceComparison": "8个Mosha复制模块/CSS与固定参考字节一致，包括mosha-card.css、defaults.ts、recipe.ts。",
+    "tokens": "#07080c; Sora/Syne/Fraunces; 原片/薄雾/夜虹/厚玻璃/极简/液态/透镜; sheen/rim/grain/chroma/depth保留。",
+    "reducedMotion": {
+      "transition": "0s",
+      "animation": "none",
+      "transform": "matrix(1, 0, 0, 1, 0, 0)"
+    }
+  },
+  "gates": {
+    "product": "PARTIAL: 014/021/029与新032；不能按29条全部修复放行。",
+    "design": "PARTIAL: 001窄屏可读性；桌面hover及003预设修复接受。",
+    "backend": "PARTIAL: 015方向账本仍错误；031残余延期。",
+    "security": "PARTIAL: 005默认信任开发端口仍可越权确认；028依赖延期。",
+    "data": "PARTIAL: 数值、IC、种子表对照通过；008仍有CSV无损性/语法残余。"
+  },
+  "regressions": [
+    {
+      "id": "ASTRA-20260921-001",
+      "cursorStatus": "fixed",
+      "auditStatus": "partial",
+      "evidence": "B:001-home,002-mobile; C:001-narrow-readability-and-links",
+      "observation": "桌面裁切和hover/focus修复；390px整体缩放0.3937198，正文约4.33px，保留原ID继续修窄屏可读性。",
+      "gate": "design",
+      "originalSeverity": "P2"
+    },
+    {
+      "id": "ASTRA-20260921-002",
+      "cursorStatus": "fixed",
+      "auditStatus": "verified-fixed",
+      "evidence": "B:002-mobile; C:001-narrow-readability-and-links",
+      "observation": "390/768菜单十入口；实点数据库/设置、关抽屉、Esc通过。390四首页入口可点，数据库/设置/比赛/技能scrollWidth均390。",
+      "gate": "product",
+      "originalSeverity": "P1"
+    },
+    {
+      "id": "ASTRA-20260921-003",
+      "cursorStatus": "fixed",
+      "auditStatus": "verified-fixed",
+      "evidence": "B:003-presets",
+      "observation": "七预设实际改变stage/shell参数；背景关闭后shell ambient display=none。hero局部ambient仍保留，不能声称全部光效关闭；原只有保存无渲染变化问题已修。",
+      "gate": "design",
+      "originalSeverity": "P2"
+    },
+    {
+      "id": "ASTRA-20260921-004",
+      "cursorStatus": "fixed",
+      "auditStatus": "verified-fixed",
+      "evidence": "B:004-025-report",
+      "observation": "通过技能入口实点发送和报告；发送按钮48.015625px、nowrap，不再竖排。",
+      "gate": "design",
+      "originalSeverity": "P2"
+    },
+    {
+      "id": "ASTRA-20260921-005",
+      "cursorStatus": "fixed",
+      "auditStatus": "partial",
+      "evidence": "B:005-browser-origin-boundary; L:HTTP",
+      "observation": "3201来源与无CSRF写入阻断；默认5173来源却可读token、写设置、confirm，模拟fills1→2。",
+      "gate": "security",
+      "originalSeverity": "P0"
+    },
+    {
+      "id": "ASTRA-20260921-006",
+      "cursorStatus": "fixed",
+      "auditStatus": "verified-fixed",
+      "evidence": "L:malformed-host; A:npm-test",
+      "observation": "原始Host:[返回400 bad-host，后续health200，进程存活；坏百分号路径也400。",
+      "gate": "security",
+      "originalSeverity": "P0"
+    },
+    {
+      "id": "ASTRA-20260921-007",
+      "cursorStatus": "fixed",
+      "auditStatus": "verified-fixed",
+      "evidence": "L:007-concurrent-persist,007-corrupt-recovery",
+      "observation": "五次独立实例各并发24次创建，成功24/磁盘24/重启24；坏JSON留备份和recovery提示。未做OS断电注入。",
+      "gate": "backend",
+      "originalSeverity": "P0"
+    },
+    {
+      "id": "ASTRA-20260921-008",
+      "cursorStatus": "fixed",
+      "auditStatus": "partial",
+      "evidence": "L:008-csv,008-extra-csv; B:008-023-csv-ui",
+      "observation": "原quoted multiline、重复列、未闭合引号、HTML伪装修复；引号内部空格仍丢、非法中途引号仍接受、合法含标签文本误拒绝。残余降P2。",
+      "gate": "data",
+      "originalSeverity": "P0"
+    },
+    {
+      "id": "ASTRA-20260921-009",
+      "cursorStatus": "fixed",
+      "auditStatus": "verified-fixed",
+      "evidence": "L:009-missing-values",
+      "observation": "100/空/110→n2、min100、last110、回撤0、missing-values；没有把空当0。",
+      "gate": "data",
+      "originalSeverity": "P0"
+    },
+    {
+      "id": "ASTRA-20260921-010",
+      "cursorStatus": "fixed",
+      "auditStatus": "verified-fixed",
+      "evidence": "L:010-zero-variance",
+      "observation": "8日每日4标的常数因子→8个ic:null、stats:null、zero-variance可见。",
+      "gate": "data",
+      "originalSeverity": "P0"
+    },
+    {
+      "id": "ASTRA-20260921-011",
+      "cursorStatus": "fixed",
+      "auditStatus": "verified-fixed",
+      "evidence": "L:011-unsorted-dates",
+      "observation": "Jan3=110/Jan1=100/Jan2=90乱序→last110、回撤-10%、unsorted-dates。",
+      "gate": "data",
+      "originalSeverity": "P1"
+    },
+    {
+      "id": "ASTRA-20260921-012",
+      "cursorStatus": "fixed",
+      "auditStatus": "verified-fixed",
+      "evidence": "L:012-insufficient-cross-sections",
+      "observation": "单日4标的有IC摘要时，HTML仍显示insufficient-cross-sections、undefined-ir。",
+      "gate": "data",
+      "originalSeverity": "P1"
+    },
+    {
+      "id": "ASTRA-20260921-013",
+      "cursorStatus": "fixed",
+      "auditStatus": "verified-fixed",
+      "evidence": "L:013-upload-binding",
+      "observation": "点名astra-price.csv的100/120/90样本绑定正确；最新90、回撤-25%，未误路由IC。",
+      "gate": "product",
+      "originalSeverity": "P1"
+    },
+    {
+      "id": "ASTRA-20260921-014",
+      "cursorStatus": "fixed",
+      "auditStatus": "partial",
+      "evidence": "L:014-parser; B:014-016-trade-ui; C:014-negative-lots-ui",
+      "observation": "正向合约/方向/手数与撤单修复；-3手被改成+3，否定句仍被当肯定计划。",
+      "gate": "product",
+      "originalSeverity": "P1"
+    },
+    {
+      "id": "ASTRA-20260921-015",
+      "cursorStatus": "fixed",
+      "auditStatus": "partial",
+      "evidence": "L:014-016-ledger-plans; C:015-close-short-on-long-ui",
+      "observation": "同向累加、独立合约开空与保证金/风险同步修复；只有long2时平空1手却执行并减成long1。",
+      "gate": "backend",
+      "originalSeverity": "P0"
+    },
+    {
+      "id": "ASTRA-20260921-016",
+      "cursorStatus": "fixed",
+      "auditStatus": "verified-fixed",
+      "evidence": "L:014-016-ledger-plans; C:032-offline-confirm-error",
+      "observation": "过期拒绝plan-expired，离线confirm400且fills不增；取消不成交。前端吞错另列032，不推翻后端门通过。",
+      "gate": "backend",
+      "originalSeverity": "P1"
+    },
+    {
+      "id": "ASTRA-20260921-017",
+      "cursorStatus": "fixed",
+      "auditStatus": "verified-fixed",
+      "evidence": "L:017-018-jev-templates; B:017-018-jev-ui",
+      "observation": "30个100加当前130，breakout产生open-long pending；窗口排除当前bar。",
+      "gate": "backend",
+      "originalSeverity": "P1"
+    },
+    {
+      "id": "ASTRA-20260921-018",
+      "cursorStatus": "fixed",
+      "auditStatus": "verified-fixed",
+      "evidence": "L:017-018-jev-templates; B:017-018-jev-ui",
+      "observation": "三模板实点开始/采样/停止；单次与无后台调度说明明确；pending去重，停止取消未确认Jev计划，没有自动fill。",
+      "gate": "product",
+      "originalSeverity": "P2"
+    },
+    {
+      "id": "ASTRA-20260921-019",
+      "cursorStatus": "fixed",
+      "auditStatus": "verified-fixed",
+      "evidence": "B:019-settings-roundtrip",
+      "observation": "设置保存mock URL/model后离开再进仍在；空key框再保存不覆盖旧key，GET仅last4。",
+      "gate": "product",
+      "originalSeverity": "P1"
+    },
+    {
+      "id": "ASTRA-20260921-020",
+      "cursorStatus": "fixed",
+      "auditStatus": "verified-fixed",
+      "evidence": "L:020-021-model-capture",
+      "observation": "mock收到/v1/chat/completions；503与约8秒超时回退本地，消息/轨迹记录model-http-503/model-timeout。非真实模型可用性认证。",
+      "gate": "backend",
+      "originalSeverity": "P1"
+    },
+    {
+      "id": "ASTRA-20260921-021",
+      "cursorStatus": "fixed",
+      "auditStatus": "partial",
+      "evidence": "L:020-021-model-capture",
+      "observation": "第二轮已有ALPHA历史和技能name/summary；仍没有SKILL约束正文、本地报告数据/统计，Dataset:unbound。",
+      "gate": "backend",
+      "originalSeverity": "P1"
+    },
+    {
+      "id": "ASTRA-20260921-022",
+      "cursorStatus": "fixed",
+      "auditStatus": "verified-fixed",
+      "evidence": "B:022-shortcut; L:022-idempotency",
+      "observation": "延迟mock下3次Ctrl+Enter只有1条user/1个artifact；同key并发3次服务端同样只写1次。",
+      "gate": "product",
+      "originalSeverity": "P1"
+    },
+    {
+      "id": "ASTRA-20260921-023",
+      "cursorStatus": "fixed",
+      "auditStatus": "verified-fixed",
+      "evidence": "B:023-errors,008-023-csv-ui",
+      "observation": "消息503可见错误、保留输入、可重试；非法CSV可见错误；不存在会话有404且无composer。只关闭原列明路径，不代表所有mutation都处理了错误。",
+      "gate": "product",
+      "originalSeverity": "P1"
+    },
+    {
+      "id": "ASTRA-20260921-024",
+      "cursorStatus": "fixed",
+      "auditStatus": "verified-fixed",
+      "evidence": "B:024-skills-ui; L:024-skill-lifecycle",
+      "observation": "同名本机技能ID不同；卸载后不能开技能会话，UI可重新安装；未知技能拒绝。",
+      "gate": "product",
+      "originalSeverity": "P2"
+    },
+    {
+      "id": "ASTRA-20260921-025",
+      "cursorStatus": "fixed",
+      "auditStatus": "verified-fixed",
+      "evidence": "B:025-list-refresh,004-025-report",
+      "observation": "新建后立即回列表能找到新会话；刷新报告页恢复最后iframe。",
+      "gate": "product",
+      "originalSeverity": "P2"
+    },
+    {
+      "id": "ASTRA-20260921-026",
+      "cursorStatus": "fixed",
+      "auditStatus": "verified-fixed",
+      "evidence": "B:026-favorites-ui",
+      "observation": "第六个技能和首个专家详情均可收藏，列表可打开对应资源并取消，不再仅限前四项。",
+      "gate": "product",
+      "originalSeverity": "P2"
+    },
+    {
+      "id": "ASTRA-20260921-027",
+      "cursorStatus": "fixed",
+      "auditStatus": "verified-fixed",
+      "evidence": "B:027-catalog-gaps",
+      "observation": "专家/专家团列表和详情显示快照缺省说明，不再空白LEAD；不等于补齐完整上游内容。",
+      "gate": "product",
+      "originalSeverity": "P2"
+    },
+    {
+      "id": "ASTRA-20260921-028",
+      "cursorStatus": "deferred",
+      "auditStatus": "deferred",
+      "evidence": "A:npm-audit-root.json,npm-audit-web.json",
+      "observation": "root critical2包、web high2包仍在，含多条公告，不是4个独立漏洞。未证明本应用RCE；延期不是安全豁免。",
+      "gate": "security",
+      "originalSeverity": "P2"
+    },
+    {
+      "id": "ASTRA-20260921-029",
+      "cursorStatus": "fixed",
+      "auditStatus": "partial",
+      "evidence": "B:029-long-ui; L:029-long,029-current-model-truncation",
+      "observation": "API8001字拒绝已修；合法4521字到模型只剩4000、尾部丢失。UI超限粘贴也被maxlength裁剪，提示却称不会静默截断。",
+      "gate": "product",
+      "originalSeverity": "P2"
+    },
+    {
+      "id": "ASTRA-20260921-030",
+      "cursorStatus": "fixed",
+      "auditStatus": "verified-fixed",
+      "evidence": "L:HTTP assets-and-SPA",
+      "observation": "缺失JS返回404；导航仍200 HTML，实际JS/CSS MIME、nosniff、CSP正确。",
+      "gate": "backend",
+      "originalSeverity": "P2"
+    },
+    {
+      "id": "ASTRA-20260921-031",
+      "cursorStatus": "deferred",
+      "auditStatus": "deferred",
+      "evidence": "A:install-working-tree.txt; L:port-in-use",
+      "observation": "完整web锁文件和dist忽略仍未补；端口占用已给友好提示，这个子项应承认已修，不能照抄旧问题。",
+      "gate": "backend",
+      "originalSeverity": "P3"
+    }
+  ],
+  "findings": [
+    {
+      "id": "ASTRA-20260921-001",
+      "severity": "P2",
+      "gate": "design",
+      "status": "partial",
+      "title": "窄屏避免裁切的代价是入口说明几乎不可读",
+      "path": "apps/web/src/components/Glass.tsx:59-73,91-112",
+      "repro": [
+        "390x844、浏览器缩放100%打开首页，使用薄雾预设。",
+        "观察520px高的扇形区，聚焦首张卡，再点击四个入口确认路由。"
+      ],
+      "expected": "完整显示且保持可读；不能只用不越界作为响应式验收。",
+      "actual": "stage350x520、fit0.39371980676328505；22px/11px经缩放约8.66px/4.33px，激活1.07倍后仍很小。截图显示大块空白和一小叠卡。四个入口可点，桌面hover/focus和裁切已修。",
+      "fix": "保留Mosha层，窄屏改独立卡、可滚动卡或列表布局，调整gap/高度/文案，不将文字整体缩到0.39；设置可读字号和点击热区验收下限。",
+      "regression": "390/768/1440真实截图、点击、键盘焦点和reduced-motion；记录变换后尺寸，不只断言scrollWidth。",
+      "evidence": [
+        "B:r2-home-390.png,001-home,002-mobile",
+        "C:r2-mobile-card-focus.png,001-narrow-readability-and-links"
+      ],
+      "originalSeverity": "P2"
+    },
+    {
+      "id": "ASTRA-20260921-005",
+      "severity": "P0",
+      "gate": "security",
+      "status": "partial",
+      "title": "默认启动仍信任无关开发端口并允许其确认模拟交易",
+      "path": "server/lib/http-guard.mjs:10-24,49-66; server/index.mjs mutation guard",
+      "repro": [
+        "隔离目录npm start，不设置QS_ORIGINS，也不启动本项目Vite；连接模拟账户并创建pending计划。",
+        "另起仅用于审计的网页http://127.0.0.1:5173，从页面fetch 3198/api/bootstrap获取csrfToken。",
+        "带token从该网页PUT设置并POST /api/contest/plans/<id>/confirm，不点击工作台确认按钮。",
+        "对照3201来源重复读取。"
+      ],
+      "expected": "普通启动仅信任自身来源；开发/预览来源需按显式启动模式授权，不能仅占用常见端口就拿到读写/确认权限。",
+      "actual": "真实Chrome：3201被阻断；无关5173读取200、写入200、confirm200，fills1→2，workspaceName被修改。默认allowlist无条件加入127/localhost的5173、4173。原通配CORS与默认0.0.0.0问题已修。仅证明另一loopback网页及本地模拟账户，不是所有互联网网站可利用或真实成交证明。",
+      "fix": "默认只开本服务origin；dev/preview确实启动时显式配置准确来源，敏感确认依赖受控会话授权，不能把token发给未授权来源；保留Host/loopback/CSRF新防护。",
+      "regression": "默认下真实浏览器3201/5173/4173的GET、预检、PUT、confirm；拒绝后设置/fills不变；开发模式另有正向用例。",
+      "evidence": [
+        "B:005-browser-origin-boundary",
+        "L:HTTP no-CSRF and Origin3201 controls"
+      ],
+      "originalSeverity": "P0"
+    },
+    {
+      "id": "ASTRA-20260921-015",
+      "severity": "P0",
+      "gate": "backend",
+      "status": "partial",
+      "title": "模拟账本仍把平空记成减多仓",
+      "path": "server/lib/studio.mjs:374-395,425-459,1096-1121",
+      "repro": [
+        "隔离空账户启用模拟赛，创建并确认开多rb2610 2手，确认只有long2、没有short。",
+        "输入平空 rb2610 1手，查看pending并点击确认。",
+        "核对reason、side、fills、position和margin；另核对持多时open-short是否被隐式净额抵消。"
+      ],
+      "expected": "平空必须要求足量空仓，无空仓则拒绝，不能减多仓；仅支持净仓也须明确转换或拒绝不支持的动作。",
+      "actual": "UI实测reason平空rb2610 1手，side被降为close；确认后long2→long1、margin24000→12000、fills1→2。没有空仓。引擎还复现反向开仓隐式抵消。同向累加、独立合约开空和风险指标联动已修。仅本地模拟账本，不是实际柜台成交。",
+      "fix": "动作保留open-long/open-short/close-long/close-short；按合约与方向校验足量仓位、全部不变量，原子记账。若用净额模型必须在计划明确转换或拒绝歧义。",
+      "regression": "无空仓平空、无多仓平多、超量平仓、加仓、反向开仓、部分/全平、多合约、fills可重放一致。",
+      "evidence": [
+        "C:015-close-short-on-long-ui,r2-close-short-long-reduced.png",
+        "L:014-016-ledger-plans"
+      ],
+      "originalSeverity": "P0"
+    },
+    {
+      "id": "ASTRA-20260921-014",
+      "severity": "P1",
+      "gate": "product",
+      "status": "partial",
+      "title": "负数量与否定句仍被解析成肯定开仓计划",
+      "path": "server/lib/studio.mjs:374-395",
+      "repro": [
+        "模拟赛会话发开多 rb2610 -3手，只看计划，不确认。",
+        "对parseTradeIntent再输入不要开多 rb2610 3手及小数手数。"
+      ],
+      "expected": "完整解析有符号数量并校验支持的正整数；否定、冲突或不可靠意图不创建计划，应拒绝/澄清。",
+      "actual": "UI的-3手生成open-long×3 pending，负号被跳过；引擎将不要开多解释为place/open-long，小数可成为lots。正向合约/方向/手数与撤单样例已修。确认门仍在，没有因本例自动成交。",
+      "fix": "先识别完整数字token和符号，校验整数范围；否定/询问不能当执行意图，不用子串和仅匹配正数regex兜底。",
+      "regression": "正整数/0/负数/小数/缺失数量/否定/反问，拒绝不产生pending，fills不变。",
+      "evidence": [
+        "C:014-negative-lots-ui,r2-negative-quantity-pending.png",
+        "L:014-parser"
+      ],
+      "originalSeverity": "P1"
+    },
+    {
+      "id": "ASTRA-20260921-021",
+      "severity": "P1",
+      "gate": "backend",
+      "status": "partial",
+      "title": "历史已补，模型仍未获得右侧报告的数据上下文",
+      "path": "server/lib/studio.mjs:846-889; maybeModel(conv,userText,local)",
+      "repro": [
+        "使用隔离本地HTTP mock作为模型服务，绑定skill-factor-evaluate开会话。",
+        "先发记住代号ALPHA，分析动量因子并生成右侧报告。",
+        "再问代号与右侧报告IC数值，抓取第二次/v1/chat/completions的messages。"
+      ],
+      "expected": "获得授权历史、技能约束、本次/已生成报告的数据来源、关键统计和缺口摘要；未提供时明确不能解释该报告。",
+      "actual": "第二次已有ALPHA历史和skill name/summary，但仅system+历史对话；system写Dataset:unbound，没有factor-momentum.csv、IC数值、截面数、gaps、产物摘要或SKILL约束正文。local分析先完成但未进入请求。mock不回显本地报告，测试没有把模型猜对冒充上下文通过。",
+      "fix": "构建有预算的typed context envelope：dataset id/hash、统计、gaps、绑定技能约束和artifact摘要；不必发整份HTML，但应与右侧一致，隔离资料与指令且不发密钥。",
+      "regression": "抓包断言两轮历史、技能约束、指定数据集、IC/截面摘要和缺口；密钥不进入messages。",
+      "evidence": [
+        "L:020-021-model-capture"
+      ],
+      "originalSeverity": "P1"
+    },
+    {
+      "id": "ASTRA-20260921-008",
+      "severity": "P2",
+      "originalSeverity": "P0",
+      "gate": "data",
+      "status": "partial",
+      "title": "CSV剩余无损性与引号语法校验未闭合",
+      "path": "server/lib/studio.mjs:65-158",
+      "repro": [
+        "parseCsv处理a,b\n\"  padded  \",1，检查字段内部空格。",
+        "处理a,b\nab\"cd\",1。",
+        "处理合法CSV a,b\n\"text<b>hi</b>\",1。"
+      ],
+      "expected": "保留quoted字段内部空格和文本；非法中途引号拒绝；防HTML冒充不能误伤合法CSV字段文字。",
+      "actual": "padded前后空格丢失；非法ab\"cd\"被接受并改写abcd；合法含<b>文本字段返回invalid-csv。原quoted multiline两条变三条、重复列、未闭合引号和HTML伪装已修；本轮残余降P2，不继续说原P0数值错行未修。",
+      "fix": "使用完整CSV状态机或成熟解析器，quoted值原样保留；限定合法引号位置，文件结构校验不用前400字符的笼统HTML标签正则。",
+      "regression": "quoted spaces、逗号/换行/双引号、非法quote-in-unquoted、正常标签文本和真正HTML文件。",
+      "evidence": [
+        "L:008-csv,008-extra-csv",
+        "B:008-023-csv-ui"
+      ]
+    },
+    {
+      "id": "ASTRA-20260921-029",
+      "severity": "P2",
+      "gate": "product",
+      "status": "partial",
+      "title": "8000字输入合同与模型4000字裁剪仍不一致",
+      "path": "server/lib/studio.mjs:857-862; apps/web/src/pages/Conversations.tsx composer",
+      "repro": [
+        "接本地mock模型，经API提交4500个A加ASTRA-END-INSTRUCTION，共4521字符。",
+        "比较存储user消息与mock收到的当前user.content长度及尾标。",
+        "浏览器粘贴8100个A加ASTRA-END，共8109字符，观察输入与提示。"
+      ],
+      "expected": "上限内当前输入完整进入处理链；超限明确拒绝或确认裁剪，不在后续阶段无提示删要求。",
+      "actual": "存储4521，模型当前user只有4000且尾标丢失，history映射对当前消息也slice(0,4000)。UI粘贴8109只留下8000，提示却为已到上限，不会静默截断。服务端8001返回too-long已修。",
+      "fix": "统一输入和模型预算；保留当前消息，裁剪历史要有策略/提示；超限粘贴明确拒绝或提示截去数量，不能承诺不会截断。",
+      "regression": "3999/4000/4001/7999/8000/8001、尾部限制、中文/emoji；比对存储与实际模型payload。",
+      "evidence": [
+        "L:029-current-model-truncation,029-long",
+        "B:029-long-ui"
+      ],
+      "originalSeverity": "P2"
+    },
+    {
+      "id": "ASTRA-20260921-032",
+      "severity": "P2",
+      "gate": "product",
+      "status": "open",
+      "title": "关闭比赛后确认仍可点，后端拒绝被界面吞掉",
+      "path": "apps/web/src/pages/Competitions.tsx:20-27,140-159",
+      "repro": [
+        "启用模拟赛并创建pending计划。",
+        "比赛页点击关闭比赛模式。",
+        "点击计划行确认执行这笔交易，观察Network、页面与fills。"
+      ],
+      "expected": "offline禁用确认并说明原因，或显示错误和重新连接入口；不能只在控制台异常。",
+      "actual": "真实Chrome：confirm400 contest-offline，pageerror出现，但qs-error/alert为空，pending和按钮保留。fills0→0。没有未确认成交，不推翻016后端门通过或023消息/导入路径已修。",
+      "fix": "确认/取消/开始等mutation捕获并呈现错误，离线禁用确认，提供重新连接后重试，失败按钮恢复。",
+      "regression": "offline/expired/余额不足/503/重复点击；可见错误、按钮状态正确、fills不增。",
+      "evidence": [
+        "C:032-offline-confirm-error,r2-offline-confirm-error.png"
+      ]
+    },
+    {
+      "id": "ASTRA-20260921-028",
+      "severity": "P2",
+      "gate": "security",
+      "status": "deferred",
+      "title": "依赖告警仍在，延期不等于安全门通过",
+      "path": "package.json; apps/web/package.json; npm audit",
+      "repro": [
+        "冻结SHA干净目录npm install。",
+        "运行npm audit --json和npm audit --prefix apps/web --json，逐条核对公告与实际调用模式。"
+      ],
+      "expected": "保留未修告警和可达性范围，另排升级/回归；扫描等级不是实际RCE证明，尚未证明RCE也不是永久豁免。",
+      "actual": "root critical2包（concurrently→shell-quote），web high2包（react-router-dom→react-router），各链含多条公告。npm建议concurrently9.2.4、react-router-dom7.18.4。本应用BrowserRouter；部分Framework/SSR专属问题不直接适用，但不能据此排除所有其他公告。",
+      "fix": "继续deferred，明确负责人/截止条件；单独升级、追踪输入可达性并回归dev/路由/构建，勿写已证明RCE或全部不适用。",
+      "regression": "升级后audit、npm run dev、build、路由/前后退/刷新/外链。",
+      "evidence": [
+        "A:npm-audit-root.json,npm-audit-web.json"
+      ],
+      "originalSeverity": "P2"
+    },
+    {
+      "id": "ASTRA-20260921-031",
+      "severity": "P3",
+      "gate": "backend",
+      "status": "deferred",
+      "title": "锁文件和dist忽略仍延期，端口说明已改善",
+      "path": "apps/web/package-lock.json; .gitignore; server/index.mjs server.on(error)",
+      "repro": [
+        "干净目录npm install后git status --short。",
+        "核对dist忽略和重复占用同端口启动。"
+      ],
+      "expected": "安装可重复、构建产物不误提交、启动故障可诊断。",
+      "actual": "安装仍改写web lockfile，dist仍未跟踪而非忽略。重复端口已有友好Port 3198 is already in use说明并exit1，应承认此子项已修。",
+      "fix": "提交完整web锁文件并npm ci验证，补dist忽略；保留已改好的端口提示，不重复修通过的子项。",
+      "regression": "干净安装构建状态、npm ci、未build 503提示、最低与不支持Node版本；本轮未独立执行低于支持版本的Node。",
+      "evidence": [
+        "A:install-working-tree.txt",
+        "L:port-in-use"
+      ],
+      "originalSeverity": "P3"
+    }
+  ],
+  "evidence": {
+    "A": {
+      "runId": 35609235743,
+      "artifactId": 10642094207,
+      "name": "astra-20260921-r2-baseline",
+      "sha256": "d7fd89bac210f1735888a843251cddcf3b6496cc405005cd9b3dc1fce4e782ff",
+      "url": "https://github.com/Simon66-workshop/66QuantStudio/actions/runs/35609235743"
+    },
+    "B": {
+      "runId": 35610462012,
+      "artifactId": 10644090956,
+      "name": "astra-20260921-r2-browser",
+      "sha256": "643daaae42cdb45fd728f756d59538ee1f13aee73ac122f332e9a59f0cfad895",
+      "url": "https://github.com/Simon66-workshop/66QuantStudio/actions/runs/35610462012"
+    },
+    "C": {
+      "runId": 35611463042,
+      "artifactId": 10644780171,
+      "name": "astra-20260921-r2-followup",
+      "sha256": "6d8603861af0993bf68112d46a3be8a5844738fc75bad88d42f05e76aff25aee",
+      "url": "https://github.com/Simon66-workshop/66QuantStudio/actions/runs/35611463042"
+    },
+    "L": {
+      "description": "Astra独立本地Node/HTTP合成fixtures，不是Cursor日志；永久报告保留关键数值和可重现步骤，不要求聊天附件。",
+      "concurrentPersist": [
+        {
+          "fulfilled": 24,
+          "disk": 24,
+          "restarted": 24
+        },
+        {
+          "fulfilled": 24,
+          "disk": 24,
+          "restarted": 24
+        },
+        {
+          "fulfilled": 24,
+          "disk": 24,
+          "restarted": 24
+        },
+        {
+          "fulfilled": 24,
+          "disk": 24,
+          "restarted": 24
+        },
+        {
+          "fulfilled": 24,
+          "disk": 24,
+          "restarted": 24
+        }
+      ],
+      "corruptRecovery": "state.corrupt-*备份保留，snapshot.recovery.error=state-json-corrupt",
+      "priceMissing": {
+        "n": 2,
+        "min": 100,
+        "last": 110,
+        "maxDrawdown": 0,
+        "gaps": [
+          "missing-values"
+        ]
+      },
+      "dateOrdering": {
+        "last": 110,
+        "maxDrawdown": -0.09999999999999998,
+        "gap": "unsorted-dates"
+      },
+      "zeroVariance": {
+        "crossSections": 8,
+        "allIcNull": true,
+        "stats": null,
+        "gap": "zero-variance"
+      },
+      "singleCrossSection": {
+        "n": 1,
+        "gaps": [
+          "insufficient-cross-sections",
+          "undefined-ir"
+        ],
+        "gapsVisibleInHtml": true
+      },
+      "modelCapture": {
+        "path": "/v1/chat/completions",
+        "secondMessages": [
+          {
+            "role": "system",
+            "content": "You are QuantStudio. Research only. Never claim live fills. Mark data gaps. Bound skill: factor-evaluate. Use when an agent needs to evaluate a single quantitative factor or signal. Dataset: unbound. Do not send or request API keys."
+          },
+          {
+            "role": "user",
+            "content": "记住代号ALPHA，分析动量因子"
+          },
+          {
+            "role": "assistant",
+            "content": "ASTRA MOCK ANSWER\n\n——\n本地核对仍保留在右侧产物中。"
+          },
+          {
+            "role": "user",
+            "content": "刚才的代号是什么？请解释右侧刚生成报告的IC数值"
+          }
+        ],
+        "fallbacks": [
+          "model-http-503",
+          "model-timeout after approximately8seconds"
+        ]
+      },
+      "currentModelTruncation": {
+        "submitted": 4521,
+        "stored": 4521,
+        "modelCurrentUser": 4000,
+        "tailPreserved": false
+      },
+      "rawLogs": "engine-results.json与http-extra-results.json来自本地独立执行；各finding提供可重放输入。数字摘要不是所有未测情形均已通过。"
+    },
+    "retention": "A/B/C截图、浏览器脚本、日志artifacts保留至2026-12-20（管理者删除或调整除外）；三个ZIP均已下载并核验SHA256。与关键结论相关的截图已打开核对，没有将缺字字体/管理策略阻断记作产品bug。"
+  },
+  "seedOracle": {
+    "implementation": "独立Python csv/statistics/math，不导入产品分析代码；逐日80个IC与产品逐一比较，容差1e-12内一致。",
+    "csi300": {
+      "rows": 420,
+      "lastDateInFile": "2025-08-11",
+      "close": 4226.65,
+      "maxDrawdown": -0.04595874922021215
+    },
+    "factor": {
+      "rows": 640,
+      "dailyCrossSections": 80,
+      "meanIc": 0.935314813971839,
+      "sampleStd": 0.027587113467268488
+    },
+    "boundary": "仅仓库seed文件计算一致性，不是真实行情来源背书、实时行情认证或策略胜率。空表/缺口和研究免责声明亦检查。"
+  },
+  "gapChallenges": [
+    {
+      "topic": "DSH/vendor/PandaData/official contest/TypeSafe absent",
+      "decision": "agree",
+      "note": "声明缺口仍在，不重写为新P0。"
+    },
+    {
+      "topic": "compact expert/team metadata",
+      "decision": "agree",
+      "note": "UI现有缺口说明，不代表内容已补全。"
+    },
+    {
+      "topic": "8second model fallback",
+      "decision": "agree-after-fix",
+      "note": "020路径与失败轨迹通过本地mock验证，不是实际provider认证。"
+    },
+    {
+      "topic": "shared member isolation",
+      "decision": "agree",
+      "note": "仍非共享部署验收；005是默认本地其他来源的独立反例，不是借已声明缺口重复开P0。"
+    },
+    {
+      "topic": "cursor bot push403",
+      "decision": "historical-not-retested",
+      "note": "不对Cursor当前凭据/权限作新断言。"
+    }
+  ],
+  "notRun": [
+    "iOS Safari/Android真机",
+    "真实PandaData/官方Jev/官方赛事成交/模型质量",
+    "操作系统断电和多进程持久化故障注入",
+    "低于支持版本的Node",
+    "每条依赖公告的完整利用验证",
+    "生产或共享部署验收"
+  ],
+  "nextRegression": "按005→015/014→021/029→001/032→008修；028/031单独排期并写负责人/条件。005必须真实其他来源，015必须方向账本，021/029必须抓mock实际payload，001必须390px可读截图，032必须可见错误且fills不增。其余22条做必要保护回归，不从零重写同义清单。",
+  "references": [
+    {
+      "url": "https://www.rfc-editor.org/rfc/rfc4180",
+      "use": "§2 CSV空格与引号规则，支持008残余。"
+    },
+    {
+      "url": "https://github.com/advisories/GHSA-w7jw-789q-3m8p",
+      "use": "shell-quote公告需要实际危险调用链，扫描不等于本应用RCE。"
+    },
+    {
+      "url": "https://github.com/advisories/GHSA-2w69-qvjg-hvjx",
+      "use": "该公告明确区分Declarative BrowserRouter与受影响模式，不用它排除其他不同公告。"
+    }
+  ]
+}
