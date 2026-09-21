@@ -1,0 +1,70 @@
+name: Astra R2 independent regression
+on:
+  push:
+    branches: [audit/astra-20260921-r2]
+    paths: [.github/workflows/ASTRA-20260921-R2.yml]
+permissions:
+  contents: read
+jobs:
+  baseline:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.16.0'
+      - name: Clone and freeze candidate plus design reference
+        run: |
+          mkdir -p "$RUNNER_TEMP/astra-r2/evidence"
+          cd "$RUNNER_TEMP/astra-r2"
+          git clone https://github.com/Simon66-workshop/66QuantStudio.git
+          cd 66QuantStudio
+          git checkout main
+          git pull --ff-only
+          git rev-parse HEAD > ../evidence/main-at-clone.txt
+          git checkout --detach a0a1213bad9df74aa561ea2a8e2814b987fc2137
+          git bundle create ../evidence/66QuantStudio.bundle --all
+          git rev-parse HEAD > ../evidence/base-sha.txt
+          git diff --stat ac3b8915488da0664d78a4b19afb262636735bbe HEAD > ../evidence/fix-stat.txt
+          cd ..
+          git clone --depth 1 https://github.com/Simon66-workshop/mosha-card-ui.git
+          git -C mosha-card-ui rev-parse HEAD > evidence/mosha-sha.txt
+      - name: Fresh installation test build start
+        run: |
+          cd "$RUNNER_TEMP/astra-r2/66QuantStudio"
+          set +e
+          { uname -a; node --version; npm --version; date -u +%FT%TZ; } > ../evidence/environment.txt
+          npm install > ../evidence/npm-install.log 2>&1
+          echo "$?" > ../evidence/npm-install.exit
+          npm test > ../evidence/npm-test.log 2>&1
+          echo "$?" > ../evidence/npm-test.exit
+          npm run build > ../evidence/npm-build.log 2>&1
+          echo "$?" > ../evidence/npm-build.exit
+          npm audit --json > ../evidence/npm-audit-root.json 2>&1
+          npm audit --prefix apps/web --json > ../evidence/npm-audit-web.json 2>&1
+          git status --short > ../evidence/install-working-tree.txt
+          npm start > ../evidence/npm-start.log 2>&1 &
+          SERVER_PID=$!
+          trap 'kill "$SERVER_PID" 2>/dev/null || true' EXIT
+          for i in $(seq 1 30); do
+            curl -sf http://127.0.0.1:3198/api/health > ../evidence/health.json && break
+            sleep 1
+          done
+          curl -sS -D ../evidence/home-headers.txt http://127.0.0.1:3198/ > ../evidence/home.html
+          cd "$RUNNER_TEMP/astra-r2"
+          npx --yes --package @playwright/test@1.55.1 playwright screenshot --channel chrome --viewport-size '1440,1000' --wait-for-timeout 2000 http://127.0.0.1:3198/ evidence/home-first.png > evidence/browser-first.log 2>&1
+          exit 0
+      - name: Package for independent inspection
+        if: always()
+        run: |
+          cd "$RUNNER_TEMP/astra-r2"
+          tar --exclude='*/.git' --exclude='*/server/runtime' --exclude='*/.env' -czf audited-workspace.tar.gz 66QuantStudio mosha-card-ui
+          sha256sum audited-workspace.tar.gz > evidence/workspace.sha256
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: astra-20260921-r2-baseline
+          path: |
+            ${{ runner.temp }}/astra-r2/audited-workspace.tar.gz
+            ${{ runner.temp }}/astra-r2/evidence/
+          retention-days: 90
