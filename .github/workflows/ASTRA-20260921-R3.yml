@@ -1,4 +1,4 @@
-name: Astra R3 independent browser and engine regression
+name: Astra R3 focused verification and readable visual evidence
 on:
   push:
     branches: [audit/astra-20260921-r3]
@@ -7,9 +7,9 @@ permissions:
   contents: read
   actions: read
 jobs:
-  regressions:
+  focused:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 12
     steps:
       - uses: actions/setup-node@v4
         with:
@@ -20,50 +20,90 @@ jobs:
           run-id: 35621474346
           github-token: ${{ github.token }}
           path: ${{ runner.temp }}/r3
-      - name: Restore verified isolated baseline and audit harnesses
-        env:
-          GH_TOKEN: ${{ github.token }}
+      - uses: actions/download-artifact@v4
+        with:
+          name: astra-20260921-r3-regressions
+          run-id: 35622977284
+          github-token: ${{ github.token }}
+          path: ${{ runner.temp }}/r3-prior
+      - name: Restore baseline, install audit-only CJK font, and correct harness wait
         run: |
           cd "$RUNNER_TEMP/r3"
           sha256sum -c evidence/workspace.sha256
           tar -xzf audited-workspace.tar.gz
-          mkdir -p verification
+          mkdir -p focused
+          cp "$RUNNER_TEMP/r3-prior/browser.py" focused/browser.py
           python - <<'PY'
-          import urllib.request,json,base64,hashlib,os,pathlib
-          root=pathlib.Path(os.environ['RUNNER_TEMP'])/'r3'/'verification'
-          for name,sha in [('browser.py','67d11c2b643fbe219dc2abde72d45b7d4bfb53f4'),('engine.mjs','6ae3ec283fbd7d05287ac4376db9cc65dee25baf')]:
-              req=urllib.request.Request('https://api.github.com/repos/Simon66-workshop/66QuantStudio/git/blobs/'+sha,headers={'Authorization':'Bearer '+os.environ['GH_TOKEN'],'Accept':'application/vnd.github+json'})
-              obj=json.load(urllib.request.urlopen(req));data=base64.b64decode(obj['content'])
-              assert hashlib.sha1(b'blob '+str(len(data)).encode()+b'\0'+data).hexdigest()==sha
-              (root/name).write_bytes(data)
+          from pathlib import Path
+          p=Path('focused/browser.py');s=p.read_text()
+          s=s.replace('from playwright.sync_api import sync_playwright','from playwright.sync_api import sync_playwright, expect')
+          old='page.wait_for_function("document.querySelector(\'textarea\').value===\'\'")'
+          assert old in s
+          s=s.replace(old,"expect(page.locator('textarea')).to_have_value('', timeout=10000)")
+          marker=' version=b.version;b.close()'
+          assert marker in s
+          insert=''' def reference():
+            import functools
+            handler=functools.partial(http.server.SimpleHTTPRequestHandler,directory=str(ROOT.parent/'mosha-card-ui'))
+            srv=http.server.ThreadingHTTPServer(('127.0.0.1',3203),handler);threading.Thread(target=srv.serve_forever,daemon=True).start()
+            try:
+             page.set_viewport_size({'width':1440,'height':1000});page.goto('http://127.0.0.1:3203/demo/cards.html');page.locator('.mosha-card-hit').first.hover();page.wait_for_timeout(350);shot('r3-mosha-reference-hover.png');return {'referenceSha':'7abd3b0b811f483f8d172f15e843836496824b3f','title':page.title(),'cardCount':page.locator('.mosha-card-hit').count()}
+            finally:srv.shutdown();srv.server_close()
+           check('001-frozen-reference-visual',reference)
+          '''
+          s=s.replace(marker,insert+marker);p.write_text(s)
           PY
-          python -m pip install playwright==1.55.0 > verification/playwright-install.log 2>&1
-          python -m py_compile verification/browser.py
-          node --check verification/engine.mjs
-      - name: Execute independent engine and real Chrome tests
+          python -m pip install playwright==1.55.0 > focused/playwright-install.log 2>&1
+          sudo apt-get update -qq > focused/fonts-install.log 2>&1
+          sudo apt-get install -y fonts-noto-cjk >> focused/fonts-install.log 2>&1
+          fc-match ':lang=zh-cn' > focused/cjk-font-check.txt
+          python -m py_compile focused/browser.py
+      - name: Run actual browser with corrected harness and Chinese fallback fonts
         run: |
           cd "$RUNNER_TEMP/r3"
           export QS_ROOT="$PWD/66QuantStudio"
-          export OUT="$PWD/verification"
-          node verification/engine.mjs > verification/engine.log 2>&1
+          export OUT="$PWD/focused"
           cd 66QuantStudio
-          env -u QS_ORIGINS -u QS_ALLOW_DEV_ORIGINS HOST=127.0.0.1 PORT=3198 npm start > ../verification/npm-start.log 2>&1 &
+          env -u QS_ORIGINS -u QS_ALLOW_DEV_ORIGINS HOST=127.0.0.1 PORT=3198 npm start > ../focused/npm-start.log 2>&1 &
           PID=$!
-          trap 'kill "$PID" 2>/dev/null || true' EXIT
+          trap 'kill "$PID" 2>/dev/null || true; fuser -k 3198/tcp 5173/tcp 2>/dev/null || true' EXIT
           for i in $(seq 1 30); do
-            curl -sf http://127.0.0.1:3198/api/health > ../verification/health.json && break
+            curl -sf http://127.0.0.1:3198/api/health > ../focused/health.json && break
             sleep 1
           done
           cd ..
-          python verification/browser.py > verification/browser.log 2>&1
-          test -s verification/browser-results.json
-          test -s verification/engine-results.json
-          { node -v; npm -v; google-chrome --version; date -u +%FT%TZ; } > verification/environment.txt
-          cd verification
+          python focused/browser.py > focused/browser.log 2>&1
+          test -s focused/browser-results.json
+          kill "$PID" 2>/dev/null || true
+          fuser -k 3198/tcp 2>/dev/null || true
+          cd 66QuantStudio
+          env -u QS_ORIGINS -u QS_ALLOW_DEV_ORIGINS npm run dev > ../focused/npm-dev-exact.log 2>&1 &
+          DEV_PID=$!
+          for i in $(seq 1 30); do
+            curl -sf http://127.0.0.1:3198/api/health >/dev/null && curl -sf http://127.0.0.1:5173/ >/dev/null && break
+            sleep 1
+          done
+          cd ..
+          python - <<'PY'
+          import json,pathlib,os,urllib.request,shutil
+          from playwright.sync_api import sync_playwright,expect
+          out=pathlib.Path(os.environ['OUT'])
+          def snapshot():return json.load(urllib.request.urlopen('http://127.0.0.1:3198/api/bootstrap'))
+          with sync_playwright() as p:
+              b=p.chromium.launch(executable_path=shutil.which('google-chrome'),args=['--no-sandbox'])
+              page=b.new_page(viewport={'width':1440,'height':1000});page.goto('http://127.0.0.1:5173/conversations')
+              page.get_by_role('button',name='新建普通会话',exact=True).wait_for();before=len(snapshot()['conversations'])
+              page.get_by_role('button',name='新建普通会话',exact=True).click();page.locator('.qs-error').wait_for()
+              data={'command':'npm run dev','devOptInVariables':'unset','url':page.url,'error':page.locator('.qs-error').inner_text(),'newConversations':len(snapshot()['conversations'])-before}
+              page.screenshot(path=str(out/'r3-dev-exact.png'),full_page=True);(out/'dev-exact.json').write_text(json.dumps(data,ensure_ascii=False,indent=2));b.close()
+          PY
+          kill "$DEV_PID" 2>/dev/null || true
+          { node -v; npm -v; google-chrome --version; date -u +%FT%TZ; } > focused/environment.txt
+          cd focused
           find . -type f ! -name SHA256SUMS -print0 | sort -z | xargs -0 sha256sum > SHA256SUMS
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: astra-20260921-r3-regressions
-          path: ${{ runner.temp }}/r3/verification/
+          name: astra-20260921-r3-focused
+          path: ${{ runner.temp }}/r3/focused/
           retention-days: 90
