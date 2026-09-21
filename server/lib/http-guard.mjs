@@ -15,10 +15,12 @@ export function allowedOrigins(port) {
     .map((s) => s.trim())
     .filter(Boolean);
   const origins = [];
-  for (const h of hosts) {
-    origins.push(`http://${h}:${p}`);
-    origins.push(`http://${h}:5173`);
-    origins.push(`http://${h}:4173`);
+  for (const h of hosts) origins.push(`http://${h}:${p}`);
+  if (process.env.QS_ALLOW_DEV_ORIGINS === "1") {
+    for (const h of hosts) {
+      origins.push(`http://${h}:5173`);
+      origins.push(`http://${h}:4173`);
+    }
   }
   origins.push(...extras);
   return new Set(origins);
