@@ -1,55 +1,144 @@
-name: Astra R2 focused browser verification
+name: Astra R2 publish verified reports
 on:
   push:
     branches: [audit/astra-20260921-r2]
     paths: [.github/workflows/ASTRA-20260921-R2.yml]
 permissions:
-  contents: read
+  contents: write
 jobs:
-  followup:
+  publish:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 5
     steps:
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v4
         with:
-          node-version: '22.16.0'
-      - name: Freeze product and Mosha reference
+          ref: audit/astra-20260921-r2
+          fetch-depth: 0
+      - name: Render from one verified findings source and validate scope
         run: |
-          mkdir -p "$RUNNER_TEMP/astra-r2/evidence"
-          cd "$RUNNER_TEMP/astra-r2"
-          git clone https://github.com/Simon66-workshop/66QuantStudio.git
-          git -C 66QuantStudio checkout --detach a0a1213bad9df74aa561ea2a8e2814b987fc2137
-          git -C 66QuantStudio rev-parse HEAD > evidence/base-sha.txt
-          git clone https://github.com/Simon66-workshop/mosha-card-ui.git
-          git -C mosha-card-ui checkout --detach 7abd3b0b811f483f8d172f15e843836496824b3f
-          git -C mosha-card-ui rev-parse HEAD > evidence/mosha-sha.txt
-          curl -fsSL https://api.github.com/repos/Simon66-workshop/66QuantStudio/git/blobs/afca51b6c8302ecc9872319edef7f38abf798bc9 | python -c 'import sys,json,base64;sys.stdout.buffer.write(base64.b64decode(json.load(sys.stdin)["content"]))' > evidence/followup.py
-          sed -i "s/name='断开',exact=True/name='关闭比赛模式',exact=True/" evidence/followup.py
-          python -m pip install playwright==1.55.0 > evidence/pip-install.log 2>&1
-          sudo apt-get update -qq > evidence/apt.log 2>&1
-          sudo apt-get install -y fonts-noto-cjk >> evidence/apt.log 2>&1
-      - name: Run focused real browser scenarios
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/r2-publication"
+          curl -fsSL https://api.github.com/repos/Simon66-workshop/66QuantStudio/git/blobs/b332acbb29953f6a042b5e881b7d22aa844b6bdd > "$RUNNER_TEMP/r2-publication/blob.json"
+          python - <<'PY'
+          import os,json,base64,hashlib,collections,re,subprocess,pathlib
+          out=pathlib.Path(os.environ['RUNNER_TEMP'])/'r2-publication'
+          envelope=json.loads((out/'blob.json').read_text())
+          raw=base64.b64decode(envelope['content'])
+          assert hashlib.sha1(b'blob '+str(len(raw)).encode()+b'\0'+raw).hexdigest()=='b332acbb29953f6a042b5e881b7d22aa844b6bdd'
+          r=json.loads(raw)
+          base=r['baseSha']
+          assert subprocess.check_output(['git','rev-parse','origin/main'],text=True).strip()==base,'main moved; do not silently rebase audit'
+          old=json.loads(pathlib.Path('docs/audits/astra-20260921.json').read_text())
+          prior={f['id']:f for f in old['findings']}
+          counts=collections.Counter(x['auditStatus'] for x in r['regressions'])
+          assert dict(counts)=={'partial':7,'verified-fixed':22,'deferred':2},counts
+          assert len(r['regressions'])==31 and {x['id'] for x in r['regressions']}==set(prior)
+          assert {f['id'][-3:] for f in r['findings']}=={'001','005','008','014','015','021','028','029','031','032'}
+          assert len(r['findings'])==10
+          for x in r['regressions']:
+              x['gate']=prior[x['id']]['gate']
+              x['originalSeverity']=prior[x['id']]['severity']
+          for f in r['findings']:
+              assert f['gate'] in ['product','design','backend','security','data']
+              assert f['severity'] in ['P0','P1','P2','P3']
+              assert len(f['repro'])>=2 and f['expected'] and f['actual'] and f['fix']
+              if f['id'] in prior: f['originalSeverity']=prior[f['id']]['severity']
+          gate={'product':'产品','design':'设计','backend':'后端','security':'安全','data':'数据'}
+          b='https://github.com/'+r['repo']
+          lines=['# Astra 审计 2026-09-21 · R2 修复复验','',
+            '**结论：CHANGES_REQUIRED。29条修复声明中，22条独立复验通过，7条部分修复；028/031延期，另新增1条。不能整体写成29条修好或产品全量放行。**','',
+            '- 冻结main：`'+base+'`；上一轮基线：`'+r['previousBaseSha']+'`。',
+            '- 答复入口：[`cursor-20260921.md`](./cursor-20260921.md)；原报告保留。',
+            '- 本轮分支：`audit/astra-20260921-r2`；报告文件同日使用`-r2`，避免覆盖旧报告。','',
+            '## 打开界面先看什么','',r['summary'],'','## 范围与执行证据','',r['scope'],'',
+            '| 环节 | 本轮实际结果 |','|---|---|',
+            '| 取源码 | '+r['environment']['acquisition']+' |',
+            '| 浏览器环境 | '+r['environment']['browserBoundary']+' |',
+            '| 版本 | Node22.16.0 / npm10.9.2 / Ubuntu Linux；Chrome152.0.7977.82 / Playwright1.55，含CJK字体。 |',
+            '| npm install | 干净runner exit0；仍改写web lock，见031。 |',
+            '| npm test | runner和本地独立执行均22/22、0失败，不继承Cursor测试结论。 |',
+            '| npm run build / start | 两环境build exit0；npm start，3198 health ok:true；真实浏览器打开并点击。 |',
+            '| 浏览器交互 | B20组、C6组均执行完成，不代表产品全部PASS；B无pageerror，C故意复现032产生contest-offline。 |',
+            '| 测试边界 | 仅本地mock/合成数据/模拟账户，没有真实模型、官方Jev、行情或柜台交易验证。 |','',
+            '## 31条修复声明对账','',
+            '`verified-fixed`仅针对本轮列明的原问题与验收样例，不是整个功能永远无缺陷。`partial`承认已修子项，同时保留剩余反例。','',
+            '| ID | Cursor | Astra R2 | 观察及证据 |','|---|---|---|---|']
+          for x in r['regressions']:
+              lines.append('| '+x['id'][-3:]+' | '+x['cursorStatus']+' | **'+x['auditStatus']+'** | '+x['observation']+' 证据：'+x['evidence']+' |')
+          lines+=['','## 五条闸门','', '| 闸门 | 独立结论 |','|---|---|']
+          for k,v in r['gates'].items():lines.append('| '+gate[k]+' | '+v+' |')
+          lines+=['','以下只展开未关闭部分和新发现，不重复原31条完整清单。P0按任务书的安全边界/错误模拟账本标准；不代表真实资金成交。008原P0错行已修，残余降为P2。']
+          for severity,label in [('P0','阻塞'),('P1','严重'),('P2','一般'),('P3','建议')]:
+              lines+=['','## '+label+'（'+severity+'）','']
+              for f in (f for f in r['findings'] if f['severity']==severity):
+                  lines+=['### '+f['id']+' '+f['title'],'',
+                    '- 闸门：'+gate[f['gate']]+'；严重度：'+severity+'；状态：`'+f['status']+'`。',
+                    '- 位置：`'+f['path']+'`。','','复现：']
+                  lines.extend(str(i+1)+'. '+step.replace('\n',' / ') for i,step in enumerate(f['repro']))
+                  lines+=['','**期望：** '+f['expected'],'','**实际：** '+f['actual'],'',
+                     '**修改建议：** '+f['fix'],'','**建议补测：** '+f['regression'],'',
+                     '证据：'+'；'.join(f['evidence'])+'。','']
+          lines+=['## 数据独立对照','',r['seedOracle']['implementation'],'',
+            '| 文件 | 独立结果 |','|---|---|',
+            '| csi300-daily.csv | 420行；文件末日2025-08-11；close4226.65；最大回撤-0.04595874922021215，与产品一致。 |',
+            '| factor-momentum.csv | 640行、80日截面；Pearson IC均值0.935314813971839，样本标准差0.027587113467268488，与产品浮点误差范围内一致。 |','',
+            r['seedOracle']['boundary'],'','## Mosha固定参考对照','',
+            '[固定参考]('+b.replace('66QuantStudio','mosha-card-ui')+'/tree/'+r['designReference']['sha']+')；实际打开demo/cards.html并悬停。',
+            r['designReference']['sourceComparison'],r['designReference']['tokens'],
+            'reduced-motion实测transition=0s、animation=none。七预设已改变渲染；001的窄屏字号是容器集成问题，不是要求另换UI框架。','',
+            '## 声明缺口核对','']
+          for x in r['gapChallenges']:lines.append('- **'+x['topic']+'：'+x['decision']+'。** '+x['note'])
+          lines+=['','## 证据入口','',r['evidence']['retention'],'',
+            '| 代号 | GitHub运行 / artifact | ZIP SHA-256 |','|---|---|---|']
+          for key in ['A','B','C']:
+              e=r['evidence'][key]
+              e['url']=b+'/actions/runs/'+str(e['runId'])
+              lines.append('| '+key+' | [run '+str(e['runId'])+']('+e['url']+')；`'+e['name']+'` / `'+str(e['artifactId'])+'` | `'+e['sha256']+'` |')
+          lines+=['',r['evidence']['L']['description'],
+            'L关键数值、模型消息摘录和截断计数已收录同名JSON的evidence.L；不要求取得本地工作目录。该摘要不替代各finding的复现步骤。',
+            '优先看：B的r2-home-390.png、r2-menu-390.png、r2-factor-report.png；C的r2-mobile-card-focus.png、r2-mosha-reference-hover.png、r2-negative-quantity-pending.png、r2-close-short-long-reduced.png、r2-offline-confirm-error.png。',
+            '源码位置均指[冻结SHA]('+b+'/tree/'+base+')，不随main移动而静默更换。','',
+            '外部技术依据仅限定合同/可达性，不代替本次实测：']
+          for x in r['references']:lines.append('- ['+x['use']+']('+x['url']+')')
+          lines+=['','## 给Cursor的下一轮最小回归','',r['nextRegression'],'',
+            '每个修复继续按原ID回复：commit、反例前后结果、真实测试环境。延期不能改成fixed，已有22条只做必要保护，不从零生成同义清单。','',
+            '## 未执行/不据此放行','']
+          lines.extend('- '+x for x in r['notRun'])
+          lines+=['','这些边界不是本轮已复现反例的替代解释。未修改产品代码，未合并main。','']
+          md='\n'.join(lines)
+          targets={'docs/audits/astra-20260921-r2.md':md,'docs/audits/astra-20260921-r2.json':json.dumps(r,ensure_ascii=False,indent=2)+'\n'}
+          assert all(f['id'] in md for f in r['findings'])
+          assert not re.search(r'(?:sk-(?:proj-|live_)?[A-Za-z0-9_-]{20,}|ghp_[A-Za-z0-9]{20,})',md+targets['docs/audits/astra-20260921-r2.json'])
+          for name,content in targets.items():
+              assert not pathlib.Path(name).exists(),'do not overwrite prior report'
+              pathlib.Path(name).write_text(content)
+          (out/'validation.json').write_text(json.dumps({'baseSha':base,'counts':dict(counts),'files':{p:hashlib.sha256(pathlib.Path(p).read_bytes()).hexdigest() for p in targets}},indent=2))
+          print((out/'validation.json').read_text())
+          PY
+      - name: Commit and push only audit reports
         run: |
-          cd "$RUNNER_TEMP/astra-r2/66QuantStudio"
-          { uname -a; node -v; npm -v; date -u +%FT%TZ; } > ../evidence/environment.txt
-          npm install > ../evidence/npm-install.log 2>&1
-          npm run build > ../evidence/npm-build.log 2>&1
-          npm start > ../evidence/npm-start.log 2>&1 &
-          SERVER_PID=$!
-          trap 'kill "$SERVER_PID" 2>/dev/null || true' EXIT
-          for i in $(seq 1 30); do
-            curl -sf http://127.0.0.1:3198/api/health > ../evidence/health.json && break
-            sleep 1
-          done
-          export AUDIT_OUT="$RUNNER_TEMP/astra-r2/evidence"
-          export MOSHA_ROOT="$RUNNER_TEMP/astra-r2/mosha-card-ui"
-          python ../evidence/followup.py > ../evidence/followup.log 2>&1
-          git status --short > ../evidence/working-tree.txt
-          cd ../evidence
-          sha256sum * > SHA256SUMS.txt
+          set -euo pipefail
+          git rm .github/workflows/ASTRA-20260921-R2.yml
+          git add docs/audits/astra-20260921-r2.md docs/audits/astra-20260921-r2.json
+          python - <<'PY'
+          import subprocess
+          files=set(subprocess.check_output(['git','diff','--cached','--name-only','a0a1213bad9df74aa561ea2a8e2814b987fc2137'],text=True).splitlines())
+          assert files=={'docs/audits/astra-20260921-r2.md','docs/audits/astra-20260921-r2.json'},files
+          PY
+          git config user.name 'Astra audit (GitHub Actions)'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git commit -m 'audit(astra): 2026-09-21 全量审计'
+          git push origin HEAD:audit/astra-20260921-r2
+          git rev-parse HEAD > "$RUNNER_TEMP/r2-publication/published-sha.txt"
+          git diff --stat a0a1213bad9df74aa561ea2a8e2814b987fc2137 HEAD > "$RUNNER_TEMP/r2-publication/final-diff.txt"
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: astra-20260921-r2-followup
-          path: ${{ runner.temp }}/astra-r2/evidence/
+          name: astra-20260921-r2-final-reports
+          path: |
+            docs/audits/astra-20260921-r2.md
+            docs/audits/astra-20260921-r2.json
+            ${{ runner.temp }}/r2-publication/validation.json
+            ${{ runner.temp }}/r2-publication/published-sha.txt
+            ${{ runner.temp }}/r2-publication/final-diff.txt
           retention-days: 90
