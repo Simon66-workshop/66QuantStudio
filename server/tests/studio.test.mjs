@@ -43,6 +43,7 @@ test("studio contest never fills without confirm", async () => {
   const tmp = await mkdtemp(path.join(os.tmpdir(), "qs-"));
   await cp(path.join(root, "server/data"), path.join(tmp, "server/data"), { recursive: true });
   const studio = await createStudio(tmp);
+  await studio.setContest({ enabled: true, connected: true });
   const conv = await studio.startConversation({ kind: "contest", title: "期货" });
   const after = await studio.postMessage(conv.id, "开多 rb2610 1手");
   const pending = after.messages.at(-1);
