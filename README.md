@@ -6,7 +6,7 @@ Simon Wu（兆辉）的 QuantStudio 工作台。在浏览器打开即可使用�
 
 ## 运行（Web UI）
 
-需要 **Node.js 22.12+（推荐 22.19+）。
+需要 **Node.js 22.12+**（推荐 22.19+）。
 
 ```sh
 git clone https://github.com/Simon66-workshop/66QuantStudio.git
@@ -40,7 +40,7 @@ npm run dev
 | 专家 / 专家团 | 查看职责与成员，开始专属或协作会话 |
 | 会话 | 对话、执行轨迹、右侧 HTML 研究报告 |
 | 数据库 | 预览种子表、导入 CSV |
-| 比赛 | 模拟处户巡检、待确认计划、Jev 模板盯盘 |
+| 比赛 | 模拟账户巡检、待确认计划、Jev 模板盯盘 |
 | 设置 | 工作区、Mosha 预设、可选模型密钥 |
 
 赛事写入**不会自动成交**。点「确认执行这笔交易」后才记一笔 `executed-sim` 本地回执。未配置 PandaData / TypeSafe / 官方 CLI 时使用工作区缓存与本地规则，并在产物里标注缺口。
