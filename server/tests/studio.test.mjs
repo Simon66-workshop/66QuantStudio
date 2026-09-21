@@ -42,8 +42,6 @@ test("evaluateFactor reports insufficient cross sections", () => {
 test("studio contest never fills without confirm", async () => {
   const tmp = await mkdtemp(path.join(os.tmpdir(), "qs-"));
   await cp(path.join(root, "server/data"), path.join(tmp, "server/data"), { recursive: true });
-  await cp(path.join(root, "vendor/quantstudio/assets/library-v2/snapshot.json"), path.join(tmp, "vendor/quantstudio/assets/library-v2/snapshot.json"));
-  // catalog only needs catalog.json which is in server/data
   const studio = await createStudio(tmp);
   const conv = await studio.startConversation({ kind: "contest", title: "期货" });
   const after = await studio.postMessage(conv.id, "开多 rb2610 1手");
