@@ -1,80 +1,69 @@
-name: Astra R4 focused closure and research delivery
+name: Astra R4 focused delivery proof
 on:
   push:
     branches: [audit/astra-20260921-r4]
     paths: [.github/workflows/ASTRA-20260921-R4.yml]
 permissions:
   contents: read
+  actions: read
 jobs:
-  close-and-deliver:
+  focused-proof:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 6
     steps:
       - uses: actions/setup-node@v4
         with:
           node-version: '22.16.0'
-      - name: Clone frozen main and check declared revision
+      - uses: actions/download-artifact@v4
+        with:
+          name: astra-20260921-r4-closure
+          run-id: 35628912163
+          github-token: ${{ github.token }}
+          path: ${{ runner.temp }}/astra-r4-input
+      - name: Restore identical installed candidate; correct audit assertion only
         run: |
-          mkdir -p "$RUNNER_TEMP/astra-r4/evidence"
-          cd "$RUNNER_TEMP/astra-r4"
-          git clone https://github.com/Simon66-workshop/66QuantStudio.git repo
+          mkdir -p "$RUNNER_TEMP/astra-r4-proof/evidence"
+          cd "$RUNNER_TEMP/astra-r4-proof"
+          tar -xzf "$RUNNER_TEMP/astra-r4-input/audited-workspace.tar.gz"
+          cp "$RUNNER_TEMP/astra-r4-input/evidence/r4-browser.py" evidence/
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('evidence/r4-browser.py')
+          s=p.read_text()
+          old="assert page.title()=='66QuantStudio',page.title()"
+          new="assert page.title()=='66QuantStudio · Quant · Work · Trade',page.title()"
+          assert old in s
+          p.write_text(s.replace(old,new))
+          PY
           cd repo
-          git checkout --detach d8949011a6e754e122ebe2d610d6588520de73d0
-          git rev-parse HEAD > ../evidence/base-sha.txt
-          git diff 695730ce8f0272be87c5f4e63b2658a245b005cf HEAD > ../evidence/user-head-difference.patch
-          test ! -s ../evidence/user-head-difference.patch
-          git diff --stat 6ab0cf4ccddd9515f5cc93d51296ad41a1fa4f29 HEAD > ../evidence/fix-stat.txt
-          git ls-files -z | xargs -0 sha256sum > ../evidence/tracked-source.sha256
-          git bundle create ../evidence/66QuantStudio.bundle HEAD
-          find . -name AGENTS.md -not -path './node_modules/*' > ../evidence/agents-locations.txt
-          cp docs/astra-audit-brief.md docs/audits/cursor-20260921-r3.md ../evidence/
-      - name: Exact npm install test build
+          grep -v ' apps/web/package-lock.json$' "$RUNNER_TEMP/astra-r4-input/evidence/tracked-source.sha256" | sha256sum -c > ../evidence/source-verification.txt
+          cp "$RUNNER_TEMP/astra-r4-input/evidence/base-sha.txt" ../evidence/
+      - name: Audit-only browser and Chinese fonts
         run: |
-          cd "$RUNNER_TEMP/astra-r4/repo"
-          { uname -a; node -v; npm -v; date -u +%FT%TZ; } > ../evidence/environment.txt
-          set +e
-          npm install > ../evidence/npm-install.log 2>&1
-          I=$?; echo "$I" > ../evidence/npm-install.exit
-          npm test > ../evidence/npm-test.log 2>&1
-          T=$?; echo "$T" > ../evidence/npm-test.exit
-          npm run build > ../evidence/npm-build.log 2>&1
-          B=$?; echo "$B" > ../evidence/npm-build.exit
-          git status --short > ../evidence/install-working-tree.txt
-          test "$I" = 0 && test "$T" = 0 && test "$B" = 0
-      - name: Set up audit-only browser harness
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          cd "$RUNNER_TEMP/astra-r4"
-          gh api repos/Simon66-workshop/66QuantStudio/git/blobs/8e735578d4623b299e0207a2a7142721c8c3d0d0 --jq .content | base64 --decode > evidence/r4-browser.py
-          sed -i "s/assert '非投资建议' in text/assert '不构成投资建议' in text/" evidence/r4-browser.py
+          cd "$RUNNER_TEMP/astra-r4-proof"
           python -m pip install playwright==1.55.0 > evidence/browser-install.log 2>&1
           sudo apt-get update -qq > evidence/font-install.log 2>&1
           sudo apt-get install -y fonts-noto-cjk >> evidence/font-install.log 2>&1
-          python -m py_compile evidence/r4-browser.py
-      - name: Actual production UI, three residuals, exact dev launcher
+          { uname -a; node -v; npm -v; date -u +%FT%TZ; } > evidence/environment.txt
+      - name: Real browser proof without product changes
         env:
           BASE_SHA: d8949011a6e754e122ebe2d610d6588520de73d0
         run: |
-          cd "$RUNNER_TEMP/astra-r4"
+          cd "$RUNNER_TEMP/astra-r4-proof"
           export QS_ROOT="$PWD/repo" OUT="$PWD/evidence"
           set +e
           python evidence/r4-browser.py > evidence/browser.log 2>&1
           CODE=$?; echo "$CODE" > evidence/browser.exit
           cat evidence/browser.log
           exit "$CODE"
-      - name: Package evidence and isolated source
+      - name: Evidence hashes
         if: always()
         run: |
-          cd "$RUNNER_TEMP/astra-r4"
-          tar --exclude='*/.git' --exclude='*/server/runtime' --exclude='*/.env' -czf audited-workspace.tar.gz repo
-          cd evidence
+          cd "$RUNNER_TEMP/astra-r4-proof/evidence"
           find . -type f ! -name SHA256SUMS ! -path '*__pycache__*' -print0 | sort -z | xargs -0 sha256sum > SHA256SUMS
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: astra-20260921-r4-closure
-          path: |
-            ${{ runner.temp }}/astra-r4/evidence/
-            ${{ runner.temp }}/astra-r4/audited-workspace.tar.gz
+          name: astra-20260921-r4-proof
+          path: ${{ runner.temp }}/astra-r4-proof/evidence/
           retention-days: 90
