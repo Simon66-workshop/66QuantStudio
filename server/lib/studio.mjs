@@ -303,3 +303,76 @@ export function analyzeTable(headers, rows, label = "dataset") {
   });
   return { numericKeys, summary, closeStats, gaps, html, rowCount: rows.length };
 }
+
+export function evaluateFactor(rows) {
+  const ic = [];
+  const gaps = [];
+  const grouped = new Map();
+  for (const row of rows) {
+    const date = row.date || row.Date;
+    const factor = parseNumber(row.momentum_20 ?? row.factor ?? row.value);
+    const fwd = parseNumber(row.fwd_ret_5d ?? row.forward ?? row.ret);
+    if (!date || factor == null || fwd == null) continue;
+    if (!grouped.has(date)) grouped.set(date, []);
+    grouped.get(date).push({ factor, fwd, symbol: row.symbol || row.Symbol || "" });
+  }
+  for (const [date, items] of grouped) {
+    const unique = [];
+    const seen = new Set();
+    for (const it of items) {
+      const key = it.symbol || unique.length;
+      if (seen.has(key) && it.symbol) {
+        gaps.push("duplicate-symbols");
+        continue;
+      }
+      seen.add(key);
+      unique.push(it);
+    }
+    if (unique.length < 4) continue;
+    const fm = unique.reduce((a, b) => a + b.factor, 0) / unique.length;
+    const rm = unique.reduce((a, b) => a + b.fwd, 0) / unique.length;
+    let num = 0;
+    let fd = 0;
+    let rd = 0;
+    for (const it of unique) {
+      num += (it.factor - fm) * (it.fwd - rm);
+      fd += (it.factor - fm) ** 2;
+      rd += (it.fwd - rm) ** 2;
+    }
+    if (fd === 0 || rd === 0) {
+      gaps.push("zero-variance");
+      ic.push({ date, ic: null, reason: "zero-variance" });
+      continue;
+    }
+    const denom = Math.sqrt(fd * rd);
+    if (!Number.isFinite(denom) || denom === 0) {
+      gaps.push("undefined-correlation");
+      ic.push({ date, ic: null, reason: "undefined-correlation" });
+      continue;
+    }
+    ic.push({ date, ic: num / denom });
+  }
+  const values = ic.map((x) => x.ic).filter((n) => n != null);
+  const st = stats(values);
+  if (values.length < 8) gaps.push("insufficient-cross-sections");
+  if (st && st.std === 0) gaps.push("undefined-ir");
+  const uniqueGaps = [...new Set(gaps)];
+  const irText =
+    st && st.std ? (st.mean / st.std).toFixed(3) : "未定义";
+  const html = reportHtml({
+    title: "单因子截面核对",
+    kicker: "skill-factor-evaluate · local",
+    disclaimer: "IC 由工作区表格当场计算。主分未调用线上 PandaData；数据不足已标注。研究参考，非投资建议。",
+    sections: [
+      {
+        title: "IC 摘要",
+        html: st
+          ? `<p>有效截面 ${st.n} · 均值 ${st.mean.toFixed(4)} · 标准差 ${st.std.toFixed(4)} · IR ${irText}</p><p class="gap">${
+              uniqueGaps.length ? `缺口：${uniqueGaps.map(escapeHtml).join("、")}` : "未发现截面缺口。"
+            }</p>${sparkline(values)}`
+          : `<p class="gap">无法计算 IC：${uniqueGaps.map(escapeHtml).join("、") || "no-valid-cross-sections"}</p>`,
+      },
+    ],
+  });
+  return { ic, stats: st, gaps: uniqueGaps, html };
+}
