@@ -1,0 +1,11 @@
+node_modules/
+apps/web/node_modules
+server/runtime/
+.env
+.env.*
+!.env.example
+*.log
+.dsh/
+.DS_Store
+coverage/
+*.tsbuildinfo
