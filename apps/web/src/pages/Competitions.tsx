@@ -161,39 +161,60 @@ export function CompetitionsPage() {
               <th></th>
             </tr>
           </thead>
-            <tbody>
-              {(contest?.plans || []).map((p) => (
-                <tr key={p.id}>
-                  <td>{p.id}</td>
-                  <td>{p.contract}</td>
-                  <td>{p.side} × {p.lots}</td>
-                  <td>{p.status}</td>
-                  <td>
-                    {p.status === "pending" ? (
-                      <span className="flex gap-2">
-                        <button
-                          className="mosha-btn-primary h-8"
-                          disabled={busy || !online}
-                          title={!online ? "比赛未连接，无法确认" : undefined}
-                          onClick={() => void run(async () => { await api.confirm(p.id); })}
-                        >
-                          确认执行这笔交易
-                        </button>
-                        <button
-                          className="mosha-btn-ghost h-8"
-                          disabled={busy}
-                          onClick={() => void run(async () => { await api.cancel(p.id); })}
-                        >
-                          取消
-                        </button>
-                      </span>
-                    ) : null}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </GlassPanel>
-      </div>
-    );
-  }
+          <tbody>
+            {(contest?.plans || []).map((p) => (
+              <tr key={p.id}>
+                <td>{p.id}</td>
+                <td>{p.contract}</td>
+                <td>{p.side} × {p.lots}</td>
+                <td>{p.status}</td>
+                <td>
+                  {p.status === "pending" ? (
+                    <span className="flex gap-2">
+                      <button
+                        className="mosha-btn-primary h-8"
+                        disabled={busy || !online}
+                        title={!online ? "比赛未连接，无法确认" : undefined}
+                        onClick={() => void run(async () => { await api.confirm(p.id); })}
+                      >
+                        确认执行这笔交易
+                      </button>
+                      <button
+                        className="mosha-btn-ghost h-8"
+                        disabled={busy}
+                        onClick={() => void run(async () => { await api.cancel(p.id); })}
+                      >
+                        取消
+                      </button>
+                    </span>
+                  ) : null}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </GlassPanel>
+    </div>
+  );
+}
+
+export function QubePage() {
+  return (
+    <div className="space-y-4">
+      <h1 className="font-display text-2xl font-bold">QUBE / EVO</h1>
+      <GlassPanel>
+        <p className="text-sm text-muted">
+          QUBE 与 EVO 是 PandaAI 的独立研究服务，不在本工作台进程内运行。介绍页保留入口，避免把第三方账号嵌进本地会话。
+        </p>
+        <div className="mt-3 flex gap-2">
+          <a className="mosha-btn-ghost" href="https://www.pandaaiquant.com/agent_quant/" target="_blank" rel="noreferrer">
+            打开 QUBE
+          </a>
+          <a className="mosha-btn-ghost" href="https://www.pandaaiquant.com/evo/" target="_blank" rel="noreferrer">
+            打开 EVO
+          </a>
+        </div>
+      </GlassPanel>
+    </div>
+  );
+}
